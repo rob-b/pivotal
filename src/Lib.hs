@@ -73,16 +73,6 @@ stories options = do
 decode :: L.ByteString -> T.Text
 decode = TL.toStrict . TL.decodeUtf8
 
-defaultOptions :: Options
-defaultOptions = setCheckStatus defaults
-
-setCheckStatus :: Options -> Options
-setCheckStatus options =
-    options & checkStatus .~ (Just $ \_ _ _ -> Nothing)
-
-setToken :: B.ByteString -> Options -> Options
-setToken token options = options & header "X-TrackerToken" .~ [token]
-
 handle401 :: L.ByteString -> T.Text
 handle401 response = T.intercalate " " [ errorMsg response, possibleFix response ]
   where
@@ -95,6 +85,15 @@ simpleApiRequest r = case (r ^. responseStatus . statusCode) of
     401 -> return $ handle401 (r ^. responseBody)
     _ -> return $ decode (r ^. responseBody)
 
-
 loadSample :: IO L.ByteString
 loadSample = L.readFile "sample.json"
+
+defaultOptions :: Options
+defaultOptions = setCheckStatus defaults
+
+setCheckStatus :: Options -> Options
+setCheckStatus options =
+    options & checkStatus .~ (Just $ \_ _ _ -> Nothing)
+
+setToken :: B.ByteString -> Options -> Options
+setToken token options = options & header "X-TrackerToken" .~ [token]

@@ -10,7 +10,6 @@ import qualified Data.Text.IO          as TIO
 import           System.Environment    ( lookupEnv, getArgs )
 import           System.Exit           ( ExitCode(ExitFailure), exitWith )
 import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Maybe (fromMaybe)
 
 headMaybe :: [a] -> Maybe a
@@ -21,9 +20,9 @@ main :: IO ()
 main = do
     args <- fmap headMaybe getArgs
     let cmd = case fromMaybe "me" args of
-            "me" -> me
             "stories" -> stories
             "projects" -> myProjects
+            "me" -> me
             _ -> me
 
     token <- lookupEnv "PIVOTAL_TOKEN"
