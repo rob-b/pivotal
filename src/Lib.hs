@@ -51,7 +51,7 @@ myProjects options = do
 
 stories :: Options -> IO T.Text
 stories options = do
-  r <- getWith options "https://www.pivotaltracker.com/services/v5/projects/xxxxxxx/stories?with_state=unstarted"
+  r <- getWith options "https://www.pivotaltracker.com/services/v5/projects/xxxxxxx/stories?with_state=started"
   case (r ^. responseStatus . statusCode) of
       401 -> return $ handle401 (r ^. responseBody)
       200 -> return $ handle200 (r ^. responseBody)
