@@ -37,6 +37,7 @@ executable pivotal
                      , pivotal
                      , bytestring
                      , text
+                     , optparse-applicative
 
 test-suite spec
   default-language:    Haskell2010
