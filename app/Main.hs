@@ -6,72 +6,40 @@ import           Lib                   ( defaultOptions, myProjects
                                        , me
                                        , myProjects
                                        , setToken )
+import qualified Data.Text              as T
 import qualified Data.Text.IO          as TIO
-import           System.Environment    ( lookupEnv, getArgs )
+import           System.Environment    ( lookupEnv )
 import           System.Exit           ( ExitCode(ExitFailure), exitWith )
 import qualified Data.ByteString.Char8 as BC
-import Data.Maybe (fromMaybe)
 import Options.Applicative
-
-headMaybe :: [a] -> Maybe a
-headMaybe [] = Nothing
-headMaybe (x : _) = Just x
-
-main' :: IO ()
-main' = do
-    args <- fmap headMaybe getArgs
-    let cmd = case fromMaybe "me" args of
-            "stories" -> stories
-            "projects" -> myProjects
-            "me" -> me
-            _ -> me
-
-    token <- lookupEnv "PIVOTAL_TOKEN"
-    case token of
-        Nothing -> do
-            TIO.putStrLn "Must set PIVOTAL_TOKEN"
-            exitWith $ ExitFailure 1
-        Just token' -> do
-            result <- cmd $ setToken (BC.pack token') defaultOptions
-            TIO.putStrLn result
-
-
-data Args = Args { aProfile :: Maybe String
-                 , aStories :: Command
-                 } deriving (Show)
 
 data Options = Options Command deriving (Show)
 data Command = Status String
-             | Stories Integer
+             | Stories (Maybe Integer)
              | Me
+             | Projects
     deriving (Show)
 
--- pivotal project xxx stories yxy
--- pivotal stories all
--- pivotal stories yxy
--- pivotal profile
-
+type Token = BC.ByteString
 
 withInfo :: Parser a -> String -> ParserInfo a
 withInfo opts desc = info (helper <*> opts) $ progDesc desc
 
--- profileParser :: Parser Command
--- profileParser = Me <$> argument auto (metavar "IHATETHIS")
-
 storiesParser :: Parser Command
-storiesParser = Stories <$> argument auto (metavar "story-id")
+storiesParser = Stories <$> optional (argument auto (metavar "story-id"))
 
-sub :: Parser Command
-sub = subparser $
-    command "stories" (withInfo storiesParser "View story")
-        <> command "profile" (withInfo (pure Me) "somthing...")
+statusParser :: Parser Command
+statusParser = Status <$> argument str (metavar "status-kind")
 
-options :: Parser Args
-options = Args
-    <$> optional (argument str (metavar "profile"))
-    <*> sub
+commandParser :: Parser Command
+commandParser = subparser $
+           command "stories" (withInfo storiesParser "View story")
+        <> command "profile" (withInfo (pure Me) "View user's profile")
+        <> command "projects" (withInfo (pure Projects) "View user's projects")
+        <> command "status" (withInfo statusParser "View stories with given status")
 
-parseCommand = Options <$> sub
+parseCommand :: Parser Options
+parseCommand = Options <$> commandParser
 
 optionsWithInfo :: ParserInfo Options
 optionsWithInfo = info (helper <*> parseCommand)
@@ -79,7 +47,23 @@ optionsWithInfo = info (helper <*> parseCommand)
         <> progDesc "Do the thing..."
         <> header "At the top")
 
+run :: Token -> Options -> IO T.Text
+run token (Options cmd) =
+    case cmd of
+        Me -> run' me
+        Status a -> run' stories
+        Stories x -> run' stories
+        Projects -> run' myProjects
+  where
+    run' f = f $ setToken token defaultOptions
+
 main :: IO ()
 main = do
-  cmd <- execParser optionsWithInfo
-  print cmd
+  token <- lookupEnv "PIVOTAL_TOKEN"
+  valid' <- case token of
+    Nothing -> do
+      TIO.putStrLn "Must set PIVOTAL_TOKEN"
+      exitWith $ ExitFailure 1
+    Just t -> return (BC.pack t)
+  result <- (run valid') =<< execParser optionsWithInfo
+  TIO.putStrLn result
