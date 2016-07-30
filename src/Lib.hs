@@ -7,6 +7,7 @@ module Lib
     , stories
     , defaultOptions
     , setToken
+    , loadSample
     ) where
 
 import           Network.Wreq            ( Options, Response, checkStatus
@@ -21,6 +22,8 @@ import qualified Data.Text.Lazy.Encoding    as TL
 import qualified Data.Text                  as T
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Lazy       as L
+
+import Formatting
 
 -- | get info about the authenticated user
 me :: Options -> IO T.Text
@@ -60,15 +63,24 @@ stories options = do
     handle200 :: L.ByteString -> T.Text
     handle200 body = (T.intercalate "\n" . formatStoryDetails . storyDetails) body
 
-    storyDetails :: L.ByteString -> [(T.Text, T.Text, T.Text)]
+    storyDetails :: L.ByteString -> [(T.Text, T.Text, T.Text, Integer)]
     storyDetails r = r ^.. _Array . traverse .
         to (\o -> ( o ^?! key "name" . _String
                   , o ^?! key "current_state" . _String
                   , o ^?! key "story_type" . _String
+                  , o ^?! key "id" . _Integer
                   ))
 
-    formatStoryDetails :: [(T.Text, T.Text, T.Text)] -> [T.Text]
-    formatStoryDetails details = map (\(a, b, c) -> (c `T.append` " - " `T.append` a `T.append` " [" `T.append` b `T.append` "]")) details
+    formatStoryDetails :: [(T.Text, T.Text, T.Text, Integer)] -> [T.Text]
+    formatStoryDetails = map formatSingleStory
+
+formatSingleStory :: (T.Text, T.Text, T.Text, Integer) -> T.Text
+formatSingleStory (name, current_state, story_type, story_id) =
+    sformat ("#" % int % " " % (right 13 ' ') % (right 9 ' ') % stext)
+            story_id
+            current_state
+            story_type
+            name
 
 decode :: L.ByteString -> T.Text
 decode = TL.toStrict . TL.decodeUtf8

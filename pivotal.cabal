@@ -26,6 +26,7 @@ library
                      , http-client
                      , bytestring
                      , text
+                     , formatting
 
 executable pivotal
   default-language:    Haskell2010
