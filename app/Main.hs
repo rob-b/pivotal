@@ -40,30 +40,46 @@ data Args = Args { aProfile :: Maybe String
                  , aStories :: Command
                  } deriving (Show)
 
+data Options = Options Command deriving (Show)
 data Command = Status String
              | Stories Integer
+             | Me
     deriving (Show)
 
-parseInteger :: Parser Integer
-parseInteger = argument auto (metavar "INTEGER")
+-- pivotal project xxx stories yxy
+-- pivotal stories all
+-- pivotal stories yxy
+-- pivotal profile
 
-parseString :: Parser String
-parseString = argument str (metavar "STRING")
 
-profileParser :: ParserInfo Command
-profileParser = info (Status <$> parseString) (progDesc "Display profile info")
+withInfo :: Parser a -> String -> ParserInfo a
+withInfo opts desc = info (helper <*> opts) $ progDesc desc
 
-storyParser :: ParserInfo Command
-storyParser = info (Stories <$> parseInteger) (progDesc "Display story info")
+-- profileParser :: Parser Command
+-- profileParser = Me <$> argument auto (metavar "IHATETHIS")
 
-commandParser :: ParserInfo Command
-commandParser = info commands $ progDesc "My program"
-  where commands = subparser $ mconcat [command "status" profileParser, command "stories" storyParser]
+storiesParser :: Parser Command
+storiesParser = Stories <$> argument auto (metavar "story-id")
 
--- options :: Parser Args
--- options = Args
---     <$> optional (argument str (metavar "profile"))
---     <*> commandParser
+sub :: Parser Command
+sub = subparser $
+    command "stories" (withInfo storiesParser "View story")
+        <> command "profile" (withInfo (pure Me) "somthing...")
+
+options :: Parser Args
+options = Args
+    <$> optional (argument str (metavar "profile"))
+    <*> sub
+
+parseCommand = Options <$> sub
+
+optionsWithInfo :: ParserInfo Options
+optionsWithInfo = info (helper <*> parseCommand)
+        (fullDesc
+        <> progDesc "Do the thing..."
+        <> header "At the top")
+
+main :: IO ()
 main = do
-  cmd <- execParser commandParser
+  cmd <- execParser optionsWithInfo
   print cmd
