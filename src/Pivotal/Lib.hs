@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | A library to do stuff.
-module Lib
+module Pivotal.Lib
     ( me
     , myProjects
     , stories
