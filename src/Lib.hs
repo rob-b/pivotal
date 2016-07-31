@@ -42,15 +42,17 @@ myProjects options = do
         200 -> return $ handle200 (r ^. responseBody)
         _ -> return $ decode (r ^. responseBody)
   where
-    formatLine :: (Integer, T.Text) -> T.Text
-    formatLine (i, t) = T.intercalate " / " [ t, (T.pack . show) i ]
+    formatSingleProject :: (Integer, T.Text) -> T.Text
+    formatSingleProject (project_id, project_name) = sformat("#" % int % " " % stext) project_id project_name
 
     projectNames :: L.ByteString -> [(Integer, T.Text)]
-    projectNames r = r ^.. key "projects" . _Array . traverse . to (\o -> ( o ^?! key "project_id" . _Integer , o ^?! key "project_name" . _String))
+    projectNames r = r ^.. key "projects" . _Array . traverse .
+        to (\o -> ( o ^?! key "project_id" . _Integer
+                  , o ^?! key "project_name" . _String
+                  ))
 
     handle200 :: L.ByteString -> T.Text
-    handle200 body = T.append "The names and ids of your projects:\n" $
-        T.intercalate "\n" (map formatLine (projectNames body))
+    handle200 body = T.intercalate "\n" (map formatSingleProject (projectNames body))
 
 stories :: Options -> IO T.Text
 stories options = do
