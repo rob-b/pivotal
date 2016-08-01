@@ -14,7 +14,7 @@ import Debug.Trace
 data Options = Options Command
     deriving (Show)
 
-data StoriesOption = StoriesDetail Integer | StoriesList (Maybe String)
+data StoriesOption = StoriesDetail Integer | StoriesList (Maybe String) (Maybe String)
     deriving (Show)
 
 data Command = Stories StoriesOption
@@ -23,6 +23,20 @@ data Command = Stories StoriesOption
     deriving (Show)
 
 type Token = BC.ByteString
+
+storyStatuses :: [String]
+storyStatuses = [ "accepted"
+                , "delivered"
+                , "finished"
+                , "started"
+                , "rejected"
+                , "planned"
+                , "unstarted"
+                , "unscheduled"
+                ]
+
+storyKinds :: [String]
+storyKinds = [ "feature", "bug", "chore", "release" ]
 
 withInfo :: Parser a -> String -> ParserInfo a
 withInfo opts desc = info (helper <*> opts) $ progDesc desc
@@ -40,7 +54,8 @@ storiesDetailParser :: Parser StoriesOption
 storiesDetailParser = StoriesDetail <$> argument auto (metavar "story id")
 
 storiesListParser :: Parser StoriesOption
-storiesListParser = StoriesList <$> optional (option str (long "status" <> help "Filter by status" <> metavar "status"))
+storiesListParser = StoriesList <$> optional (option (readerEnum storyStatuses) (long "status" <> help "Filter by status" <> metavar "status"))
+                                <*> optional (option (readerEnum storyKinds) (long "kind" <> help "Filter by kind"))
 
 commandParser :: Parser Command
 commandParser = subparser $
@@ -51,14 +66,20 @@ commandParser = subparser $
 parseCommand :: Parser Options
 parseCommand = Options <$> commandParser
 
+readerEnum :: Foldable t => t String -> ReadM String
+readerEnum xs = eitherReader $
+  \arg -> (if arg `elem` xs
+             then return arg
+             else Left $ "cannot parse value `" ++ arg ++ "'")
+
 run :: Token -> Options -> IO T.Text
 run token (Options cmd) =
     case cmd of
         Me -> run' me
         Stories x -> do
           case x of
-            StoriesList Nothing -> trace (show x) (run' stories (mkStoriesUrl Nothing) )
-            StoriesList (Just status)  -> trace (show x) (run' stories (mkStoriesUrl $ Just status))
+            StoriesList (Just status) _  -> trace (show x) (run' stories (mkStoriesUrl $ Just status))
+            StoriesList _ _ -> trace (show x) (run' stories (mkStoriesUrl Nothing) )
             StoriesDetail _     -> trace (show x) (run' stories (mkStoriesUrl Nothing))
         Projects -> run' myProjects
   where
