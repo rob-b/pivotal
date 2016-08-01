@@ -1,15 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Pivotal.Options
     ( execParser
+    , run
     , optionsWithInfo
-    , Token
-    , Options(..)
-    , Command(..)
-    , StoriesOption(..)
     ) where
 
+import Pivotal.Lib (me, stories, myProjects, setToken, defaultOptions, mkStoriesUrl)
 import Options.Applicative
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.Text             as T
+import Debug.Trace
 
 data Options = Options Command
     deriving (Show)
@@ -50,3 +50,16 @@ commandParser = subparser $
 
 parseCommand :: Parser Options
 parseCommand = Options <$> commandParser
+
+run :: Token -> Options -> IO T.Text
+run token (Options cmd) =
+    case cmd of
+        Me -> run' me
+        Stories x -> do
+          case x of
+            StoriesList Nothing -> trace (show x) (run' stories (mkStoriesUrl Nothing) )
+            StoriesList (Just status)  -> trace (show x) (run' stories (mkStoriesUrl $ Just status))
+            StoriesDetail _     -> trace (show x) (run' stories (mkStoriesUrl Nothing))
+        Projects -> run' myProjects
+  where
+    run' f = f $ setToken token defaultOptions

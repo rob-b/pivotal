@@ -1,22 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Pivotal
-import qualified Data.Text             as T
+import           Pivotal               ( execParser, optionsWithInfo, run )
 import qualified Data.Text.IO          as TIO
 import           System.Environment    ( lookupEnv )
 import           System.Exit           ( ExitCode(ExitFailure), exitWith )
 import qualified Data.ByteString.Char8 as BC
-
-run :: Token -> Options -> IO T.Text
-run token (Options cmd) =
-    case cmd of
-        Me -> run' me
-        Status a -> run' stories
-        Stories x -> run' stories
-        Projects -> run' myProjects
-  where
-    run' f = f $ setToken token defaultOptions
 
 main :: IO ()
 main = do
