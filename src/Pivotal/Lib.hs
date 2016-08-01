@@ -8,14 +8,14 @@ module Pivotal.Lib
     , defaultOptions
     , setToken
     , loadSample
+    , mkStoriesUrl
     ) where
 
-import           Network.Wreq            ( Options, Response, checkStatus
-                                         , defaults, getWith, header
-                                         , responseBody, responseStatus
-                                         , statusCode )
+import           Network.Wreq    ( Options, checkStatus, defaults
+                                 , getWith, header, responseBody
+                                 , responseStatus, statusCode )
 import           Control.Lens
-import           Data.Aeson.Lens         ( _Array, _Integer, _String, key )
+import           Data.Aeson.Lens ( _Array, _Integer, _String, key )
 
 import qualified Data.Text.Lazy             as TL
 import qualified Data.Text.Lazy.Encoding    as TL
@@ -54,9 +54,16 @@ myProjects options = do
     handle200 :: L.ByteString -> T.Text
     handle200 body = T.intercalate "\n" (map formatSingleProject (projectNames body))
 
-stories :: Options -> IO T.Text
-stories options = do
-  r <- getWith options "https://www.pivotaltracker.com/services/v5/projects/xxxxxxx/stories?with_state=started"
+defaultUrl :: String
+defaultUrl = "https://www.pivotaltracker.com/services/v5/projects/xxxxxxx/stories?with_state=started"
+
+mkStoriesUrl :: Maybe String -> String
+mkStoriesUrl Nothing = defaultUrl
+mkStoriesUrl _       = defaultUrl
+
+stories :: Options -> String -> IO T.Text
+stories options url = do
+  r <- getWith options url
   case (r ^. responseStatus . statusCode) of
       401 -> return $ handle401 (r ^. responseBody)
       200 -> return $ handle200 (r ^. responseBody)
@@ -94,11 +101,6 @@ handle401 response = T.intercalate " " [ errorMsg response, possibleFix response
     possibleFix r = extract r "possible_fix"
     errorMsg r = extract r "error"
 
-simpleApiRequest :: Response L.ByteString -> IO T.Text
-simpleApiRequest r = case (r ^. responseStatus . statusCode) of
-    401 -> return $ handle401 (r ^. responseBody)
-    _ -> return $ decode (r ^. responseBody)
-
 loadSample :: IO L.ByteString
 loadSample = L.readFile "sample.json"
 
@@ -111,3 +113,8 @@ setCheckStatus options =
 
 setToken :: B.ByteString -> Options -> Options
 setToken token options = options & header "X-TrackerToken" .~ [token]
+
+-- simpleApiRequest :: Response L.ByteString -> IO T.Text
+-- simpleApiRequest r = case (r ^. responseStatus . statusCode) of
+--     401 -> return $ handle401 (r ^. responseBody)
+--     _ -> return $ decode (r ^. responseBody)
