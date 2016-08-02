@@ -20,6 +20,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Pivotal.Lib
                      , Pivotal.Options
+                     , Pivotal.Url
                      , Pivotal
   build-depends:       base >= 4.7 && < 5
                      , wreq
@@ -30,6 +31,7 @@ library
                      , text
                      , formatting
                      , optparse-applicative
+                     , http-types
 
 executable pivotal
   default-language:    Haskell2010

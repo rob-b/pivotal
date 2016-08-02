@@ -8,7 +8,6 @@ module Pivotal.Lib
     , defaultOptions
     , setToken
     , loadSample
-    , mkStoriesUrl
     ) where
 
 import           Network.Wreq    ( Options, checkStatus, defaults
@@ -53,13 +52,6 @@ myProjects options = do
 
     handle200 :: L.ByteString -> T.Text
     handle200 body = T.intercalate "\n" (map formatSingleProject (projectNames body))
-
-defaultUrl :: String
-defaultUrl = "https://www.pivotaltracker.com/services/v5/projects/xxxxxxx/stories?with_state=started"
-
-mkStoriesUrl :: Maybe String -> String
-mkStoriesUrl Nothing = defaultUrl
-mkStoriesUrl _       = defaultUrl
 
 stories :: Options -> String -> IO T.Text
 stories options url = do

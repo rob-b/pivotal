@@ -5,8 +5,10 @@ module Pivotal.Options
     , optionsWithInfo
     ) where
 
-import Pivotal.Lib (me, stories, myProjects, setToken, defaultOptions, mkStoriesUrl)
+import Pivotal.Lib (me, stories, myProjects, setToken, defaultOptions)
+import Pivotal.Url (mkStoriesURL', StoriesParams(..))
 import Options.Applicative
+import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Text             as T
 import Debug.Trace
@@ -14,7 +16,10 @@ import Debug.Trace
 data Options = Options Command
     deriving (Show)
 
-data StoriesOption = StoriesDetail Integer | StoriesList (Maybe String) (Maybe String)
+data StoriesOption = StoriesDetail Integer
+                   | StoriesList { sStatus :: Maybe B.ByteString
+                                 , sKind   :: Maybe B.ByteString
+                                 }
     deriving (Show)
 
 data Command = Stories StoriesOption
@@ -24,7 +29,7 @@ data Command = Stories StoriesOption
 
 type Token = BC.ByteString
 
-storyStatuses :: [String]
+storyStatuses :: [B.ByteString]
 storyStatuses = [ "accepted"
                 , "delivered"
                 , "finished"
@@ -35,7 +40,7 @@ storyStatuses = [ "accepted"
                 , "unscheduled"
                 ]
 
-storyKinds :: [String]
+storyKinds :: [B.ByteString]
 storyKinds = [ "feature", "bug", "chore", "release" ]
 
 withInfo :: Parser a -> String -> ParserInfo a
@@ -66,21 +71,23 @@ commandParser = subparser $
 parseCommand :: Parser Options
 parseCommand = Options <$> commandParser
 
-readerEnum :: Foldable t => t String -> ReadM String
-readerEnum xs = eitherReader $
-  \arg -> (if arg `elem` xs
-             then return arg
-             else Left $ "cannot parse value `" ++ arg ++ "'")
+readerEnum :: Foldable t => t B.ByteString -> ReadM B.ByteString
+readerEnum xs = eitherReader pred'
+  where
+    pred' arg = let x = BC.pack arg
+               in
+                   if x `elem` xs
+                   then return x
+                   else Left $ "cannot parse value `" ++ arg ++ "'"
 
 run :: Token -> Options -> IO T.Text
 run token (Options cmd) =
     case cmd of
         Me -> run' me
-        Stories x -> do
-          case x of
-            StoriesList (Just status) _  -> trace (show x) (run' stories (mkStoriesUrl $ Just status))
-            StoriesList _ _ -> trace (show x) (run' stories (mkStoriesUrl Nothing) )
-            StoriesDetail _     -> trace (show x) (run' stories (mkStoriesUrl Nothing))
+        Stories sl@(StoriesList status sType) -> do
+            run' stories (mkStoriesURL' "xxxxxxx" $ StoriesParams sType status)
+        Stories sd@(StoriesDetail _) ->
+            trace (show sd) (run' stories ("okok"))
         Projects -> run' myProjects
   where
     run' f = f $ setToken token defaultOptions
