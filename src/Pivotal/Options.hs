@@ -3,17 +3,19 @@ module Pivotal.Options
     ( execParser
     , run
     , optionsWithInfo
+    , App(..)
     ) where
 
 import Pivotal.Lib (me, stories, myProjects, setToken, defaultOptions)
 import Pivotal.Url (mkStoriesURL', StoriesParams(..))
 import Options.Applicative
+import Options.Applicative.Types (readerAsk)
 import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Text             as T
 import Debug.Trace
 
-data Options = Options Command
+data Options = Options (Maybe String) (Maybe Token) Command
     deriving (Show)
 
 data StoriesOption = StoriesDetail Integer
@@ -28,6 +30,11 @@ data Command = Stories StoriesOption
     deriving (Show)
 
 type Token = BC.ByteString
+
+data App = App { pivotalToken :: Token
+               , projectId    :: Maybe String
+               }
+    deriving (Show)
 
 storyStatuses :: [B.ByteString]
 storyStatuses = [ "accepted"
@@ -69,7 +76,15 @@ commandParser = subparser $
         <> command "projects" (withInfo (pure Projects) "View user's projects")
 
 parseCommand :: Parser Options
-parseCommand = Options <$> commandParser
+parseCommand = Options <$> optional (option str (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
+                       <*> optional (option readerByteString (long "pivotal-token" <> help "Pivotal API token" <> metavar "TOKEN"))
+                       <*> commandParser
+
+
+readerByteString :: ReadM BC.ByteString
+readerByteString = do
+  s <- readerAsk
+  return $ BC.pack s
 
 readerEnum :: Foldable t => t B.ByteString -> ReadM B.ByteString
 readerEnum xs = eitherReader pred'
@@ -80,8 +95,8 @@ readerEnum xs = eitherReader pred'
                    then return x
                    else Left $ "cannot parse value `" ++ arg ++ "'"
 
-run :: Token -> Options -> IO T.Text
-run token (Options cmd) =
+run :: App -> Options -> IO T.Text
+run app (Options pId _ cmd) =
     case cmd of
         Me -> run' me
         Stories sl@(StoriesList status sType) -> do
@@ -90,4 +105,9 @@ run token (Options cmd) =
             trace (show sd) (run' stories ("okok"))
         Projects -> run' myProjects
   where
-    run' f = f $ setToken token defaultOptions
+    run' f = f $ setToken (pivotalToken app) defaultOptions
+
+ensureProjectId :: Maybe String -> Maybe String -> Maybe String
+ensureProjectId _ (Just s)       = Just s
+ensureProjectId (Just s) Nothing = Just s
+ensureProjectId _ _              = Nothing

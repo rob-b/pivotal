@@ -32,6 +32,8 @@ library
                      , formatting
                      , optparse-applicative
                      , http-types
+                     , either
+                     , transformers
 
 executable pivotal
   default-language:    Haskell2010
