@@ -1,9 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+
 module Pivotal.Options
+  -- where
     ( execParser
     , run
     , optionsWithInfo
     , App(..)
+    , Options(..)
+    , Command(..)
+    , mkApp
     ) where
 
 import Pivotal.Lib (me, stories, myProjects, setToken, defaultOptions)
@@ -14,9 +20,10 @@ import qualified Data.ByteString            as B
 import qualified Data.ByteString.Char8 as BC
 import qualified Data.Text             as T
 import Debug.Trace
+import Control.Lens hiding (argument)
 
-data Options = Options (Maybe String) (Maybe Token) Command
-    deriving (Show)
+type ProjectId = BC.ByteString
+type Token = BC.ByteString
 
 data StoriesOption = StoriesDetail Integer
                    | StoriesList { sStatus :: Maybe B.ByteString
@@ -29,12 +36,23 @@ data Command = Stories StoriesOption
              | Projects
     deriving (Show)
 
-type Token = BC.ByteString
+data Options = Options { _optionsProjectId :: (Maybe ProjectId)
+                       , _optionsToken     :: (Maybe Token)
+                       , _optionsCommand   :: Command
+                       }
+    deriving (Show)
 
-data App = App { pivotalToken :: Token
-               , projectId    :: Maybe String
+
+data App = App { _appToken     :: Token
+               , _appProjectId :: ProjectId
                }
     deriving (Show)
+
+makeLenses ''Options
+makeLenses ''App
+
+mkApp :: Token -> ProjectId -> App
+mkApp token projectId = App { _appToken=token, _appProjectId=projectId }
 
 storyStatuses :: [B.ByteString]
 storyStatuses = [ "accepted"
@@ -76,7 +94,7 @@ commandParser = subparser $
         <> command "projects" (withInfo (pure Projects) "View user's projects")
 
 parseCommand :: Parser Options
-parseCommand = Options <$> optional (option str (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
+parseCommand = Options <$> optional (option readerByteString (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
                        <*> optional (option readerByteString (long "pivotal-token" <> help "Pivotal API token" <> metavar "TOKEN"))
                        <*> commandParser
 
@@ -96,18 +114,13 @@ readerEnum xs = eitherReader pred'
                    else Left $ "cannot parse value `" ++ arg ++ "'"
 
 run :: App -> Options -> IO T.Text
-run app (Options pId _ cmd) =
+run app (Options _ _ cmd) =
     case cmd of
         Me -> run' me
-        Stories sl@(StoriesList status sType) -> do
+        Stories (StoriesList status sType) -> do
             run' stories (mkStoriesURL' "xxxxxxx" $ StoriesParams sType status)
         Stories sd@(StoriesDetail _) ->
             trace (show sd) (run' stories ("okok"))
         Projects -> run' myProjects
   where
-    run' f = f $ setToken (pivotalToken app) defaultOptions
-
-ensureProjectId :: Maybe String -> Maybe String -> Maybe String
-ensureProjectId _ (Just s)       = Just s
-ensureProjectId (Just s) Nothing = Just s
-ensureProjectId _ _              = Nothing
+    run' f = f $ setToken (app ^. appToken) defaultOptions
