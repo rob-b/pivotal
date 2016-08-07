@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Pivotal               ( Options(..), execParser, mkApp
-                                       , optionsWithInfo, run )
+import           Pivotal               ( (^.), Options(..), execParser, mkApp
+                                       , optionsCommand, optionsWithInfo, run )
 import           System.Environment    ( lookupEnv )
 import           System.Exit           ( ExitCode(ExitFailure), exitWith )
 import           Control.Applicative   ( (<|>) )
@@ -22,7 +22,8 @@ main = do
     options <- execParser optionsWithInfo
     bestToken <- failIf (_optionsToken options <|> maybeEnvToken) "Must set PIVOTAL_TOKEN"
     bestProjectId <- failIf (_optionsProjectId options <|> maybeEnvProjectId) "Must set PIVOTAL_PROJECT_ID"
-    run (mkApp bestToken bestProjectId) options >>= TIO.putStrLn
+    let app = mkApp bestToken bestProjectId (options ^. optionsCommand)
+    run app >>= TIO.putStrLn
   where
     lookupEnvWith :: (String -> b) -> String -> IO (Maybe b)
     lookupEnvWith f = fmap (fmap f) . lookupEnv

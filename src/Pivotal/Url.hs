@@ -1,28 +1,45 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Pivotal.Url
-  ( StoriesParams(..), mkStoriesURL')
-     where
+    ( StoriesParams(..)
+    , mkStoriesURL'
+    , mkListParams
+    , mkDetailParams
+    ) where
 
-import Network.HTTP.Types.URI
+import           Network.HTTP.Types.URI
 import qualified Data.Text                  as T
 import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Data.ByteString            as B
 import           Data.ByteString.Builder
 import           Data.Text.Encoding         ( decodeUtf8 )
-import Data.Maybe (isJust)
+import           Data.Maybe                 ( isJust )
 
-data StoriesParams = StoriesParams { storyType  :: Maybe B.ByteString
-                                   , storyState :: Maybe B.ByteString
-                                   }
+data ListParams = ListParams { storyType  :: Maybe B.ByteString
+                             , storyState :: Maybe B.ByteString
+                             }
+    deriving (Show)
+
+data DetailParams = DetailParams
+    deriving (Show)
+
+data StoriesParams = StoryListParams ListParams | StoryDetailParams DetailParams
+    deriving (Show)
+
+mkListParams :: Maybe B.ByteString -> Maybe B.ByteString -> StoriesParams
+mkListParams t s = StoryListParams $ ListParams { storyType = t, storyState = s }
+
+mkDetailParams :: StoriesParams
+mkDetailParams = StoryDetailParams DetailParams
 
 schemeAndLocation :: T.Text
 schemeAndLocation = "https://www.pivotaltracker.com"
 
 params :: StoriesParams -> Query
-params (StoriesParams t s) =
+params (StoryListParams (ListParams t s)) =
   filter f [ ("with_state", s), ("with_story_type", t) ]
     where f pair = isJust (snd pair)
+params (StoryDetailParams _) = []
 
 joinPath :: [T.Text] -> [T.Text]
 joinPath xs = ["services", "v5"] ++ xs

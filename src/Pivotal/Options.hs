@@ -9,17 +9,20 @@ module Pivotal.Options
     , Options(..)
     , Command(..)
     , mkApp
+    , optionsCommand
+    , ( ^. )
     ) where
 
 import           Pivotal.Lib               ( defaultOptions, me, myProjects
-                                           , setToken, stories )
-import           Pivotal.Url               ( StoriesParams(..), mkStoriesURL' )
+                                           , setToken, stories, story )
+import           Pivotal.Url               ( mkDetailParams
+                                           , mkListParams, mkStoriesURL' )
 import           Options.Applicative
 import           Options.Applicative.Types ( readerAsk )
+import           Control.Lens              hiding ( argument )
 import qualified Data.ByteString           as B
 import qualified Data.ByteString.Char8     as BC
 import qualified Data.Text                 as T
-import           Control.Lens              hiding ( argument )
 
 type ProjectId = T.Text
 type Token = B.ByteString
@@ -44,14 +47,16 @@ data Options = Options { _optionsProjectId :: (Maybe ProjectId)
 
 data App = App { _appToken     :: Token
                , _appProjectId :: ProjectId
+               , _appCommand   :: Command
                }
     deriving (Show)
 
 makeLenses ''Options
 makeLenses ''App
 
-mkApp :: Token -> ProjectId -> App
-mkApp token projectId = App { _appToken=token, _appProjectId=projectId }
+mkApp :: Token -> ProjectId -> Command -> App
+mkApp token projectId cmd =
+    App { _appToken = token, _appProjectId = projectId, _appCommand = cmd }
 
 storyStatuses :: [B.ByteString]
 storyStatuses = [ "accepted"
@@ -116,14 +121,14 @@ readerEnum xs = eitherReader pred'
                    then return x
                    else Left $ "cannot parse value `" ++ arg ++ "'"
 
-run :: App -> Options -> IO T.Text
-run app (Options _ _ cmd) =
+run :: App -> IO T.Text
+run app@(App token pid cmd) =
     case cmd of
         Me -> run' me
         Stories sl@(StoriesList status sType) -> do
-          run' stories (mkStoriesURL' (app ^. appProjectId) $ StoriesParams sType status)
-        Stories sd@(StoriesDetail _) ->
-          run' stories ("okok")
+          run' stories (mkStoriesURL' (app ^. appProjectId) $ mkListParams sType status)
+        Stories sd@(StoriesDetail sId) ->
+          run' story (mkStoriesURL' (app ^. appProjectId) $ mkDetailParams)
         Projects -> run' myProjects
   where
     run' f = f $ setToken (app ^. appToken) defaultOptions
