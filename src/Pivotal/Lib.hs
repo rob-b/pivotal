@@ -11,20 +11,20 @@ module Pivotal.Lib
     , loadSample
     ) where
 
-import           Network.Wreq    ( checkStatus, defaults
-                                 , getWith, header, responseBody
-                                 , responseStatus, statusCode )
+import           Network.Wreq            ( checkStatus, defaults, getWith
+                                         , header, responseBody, responseStatus
+                                         , statusCode )
 import           Control.Lens
-import           Data.Aeson.Lens ( _Array, _Integer, _String, key )
+import           Data.Aeson.Lens         ( _Array, _Integer, _String, key )
+import           Data.Maybe              ( fromMaybe )
 
-import qualified Network.Wreq               as Wreq
-import qualified Data.Text.Lazy             as TL
-import qualified Data.Text.Lazy.Encoding    as TL
-import qualified Data.Text                  as T
-import qualified Data.ByteString            as B
-import qualified Data.ByteString.Lazy       as L
-
-import Formatting
+import qualified Network.Wreq            as Wreq
+import qualified Data.Text.Lazy          as TL
+import qualified Data.Text.Lazy.Encoding as TL
+import qualified Data.Text               as T
+import qualified Data.ByteString         as B
+import qualified Data.ByteString.Lazy    as L
+import           Formatting
 
 -- | gest info about the authenticated user
 me :: Wreq.Options -> IO T.Text
@@ -94,15 +94,23 @@ story options url = do
       _ -> return $ decode (r ^. responseBody)
 
   where
-    handle200 :: L.ByteString -> T.Text
-    handle200 body = (formatSingleStory . storyDetails) body
-
-    storyDetails :: L.ByteString -> (T.Text, T.Text, T.Text, Integer)
+    storyDetails :: L.ByteString -> (T.Text, T.Text, T.Text, T.Text, T.Text)
     storyDetails r = ( r ^?! key "name" . _String
                      , r ^?! key "current_state" . _String
                      , r ^?! key "story_type" . _String
-                     , r ^?! key "id" . _Integer
+                     , fromMaybe "" (r ^?  key "description" . _String)
+                     , r ^?! key "url" . _String
                      )
+
+    fmt :: (T.Text, T.Text, T.Text, T.Text, T.Text) -> T.Text
+    fmt (name, state, type', desc, url') =
+      sformat("" % stext % "\n\nType: " % stext % "\nState: " % stext % "\n" % stext % "\n\n" % stext) (mkTitle name) type' state url' desc
+
+    mkTitle :: T.Text -> T.Text
+    mkTitle s = T.intercalate "\n" [s, T.replicate (T.length s) "*"]
+
+    handle200 :: L.ByteString -> T.Text
+    handle200 body = (fmt . storyDetails) body
 
 decode :: L.ByteString -> T.Text
 decode = TL.toStrict . TL.decodeUtf8
@@ -115,7 +123,7 @@ handle401 response = T.intercalate " " [ errorMsg response, possibleFix response
     errorMsg r = extract r "error"
 
 loadSample :: IO L.ByteString
-loadSample = L.readFile "sample.json"
+loadSample = L.readFile "story.json"
 
 defaultOptions :: Wreq.Options
 defaultOptions = setCheckStatus defaults

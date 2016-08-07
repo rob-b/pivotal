@@ -14,13 +14,14 @@ import qualified Data.ByteString            as B
 import           Data.ByteString.Builder
 import           Data.Text.Encoding         ( decodeUtf8 )
 import           Data.Maybe                 ( isJust )
+import           Formatting
 
 data ListParams = ListParams { storyType  :: Maybe B.ByteString
                              , storyState :: Maybe B.ByteString
                              }
     deriving (Show)
 
-data DetailParams = DetailParams
+data DetailParams = DetailParams Integer
     deriving (Show)
 
 data StoriesParams = StoryListParams ListParams | StoryDetailParams DetailParams
@@ -29,8 +30,8 @@ data StoriesParams = StoryListParams ListParams | StoryDetailParams DetailParams
 mkListParams :: Maybe B.ByteString -> Maybe B.ByteString -> StoriesParams
 mkListParams t s = StoryListParams $ ListParams { storyType = t, storyState = s }
 
-mkDetailParams :: StoriesParams
-mkDetailParams = StoryDetailParams DetailParams
+mkDetailParams :: Integer -> StoriesParams
+mkDetailParams storyId = StoryDetailParams (DetailParams storyId)
 
 schemeAndLocation :: T.Text
 schemeAndLocation = "https://www.pivotaltracker.com"
@@ -45,13 +46,23 @@ joinPath :: [T.Text] -> [T.Text]
 joinPath xs = ["services", "v5"] ++ xs
 
 mkStoriesURL :: T.Text -> StoriesParams -> T.Text
-mkStoriesURL projectId term =
-    schemeAndLocation `T.append` path
+mkStoriesURL projectId parameters
+    | StoryDetailParams (DetailParams pid) <- parameters =
+          combine $ encodePathSegments (storyPath projectId (Just pid))
+    | term@(StoryListParams (ListParams _ _)) <- parameters =
+          schemeAndLocation `T.append` (path term)
   where
-    path :: T.Text
-    path = decodeUtf8 $ BLC.toStrict (toLazyByteString pathRaw)
-    pathRaw :: Builder
-    pathRaw = encodePath (joinPath [ "projects", projectId, "stories" ]) (params term)
+    path :: StoriesParams -> T.Text
+    path term = decodeUtf8 $ BLC.toStrict (toLazyByteString (pathRaw term))
+    pathRaw :: StoriesParams -> Builder
+    pathRaw term = encodePath (joinPath [ "projects", projectId, "stories" ]) (params term)
+
+combine :: Builder -> T.Text
+combine b = T.append schemeAndLocation . decodeUtf8 . BLC.toStrict $ toLazyByteString b
 
 mkStoriesURL' :: T.Text -> StoriesParams -> String
 mkStoriesURL' projectId term = T.unpack $ mkStoriesURL projectId term
+
+storyPath :: Integral a => T.Text -> Maybe a -> [T.Text]
+storyPath projectId Nothing = joinPath [ "projects", projectId, "stories" ]
+storyPath projectId (Just s) = joinPath [ "projects", projectId, "stories", sformat("" % int) s ]

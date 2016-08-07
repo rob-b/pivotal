@@ -20,6 +20,8 @@ main = do
     -- 2. Env var
     -- 3. (one day) local config file
     options <- execParser optionsWithInfo
+
+    -- FIXME: some commands don't need token + project-id
     bestToken <- failIf (_optionsToken options <|> maybeEnvToken) "Must set PIVOTAL_TOKEN"
     bestProjectId <- failIf (_optionsProjectId options <|> maybeEnvProjectId) "Must set PIVOTAL_PROJECT_ID"
     let app = mkApp bestToken bestProjectId (options ^. optionsCommand)

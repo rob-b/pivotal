@@ -28,9 +28,7 @@ type ProjectId = T.Text
 type Token = B.ByteString
 
 data StoriesOption = StoriesDetail Integer
-                   | StoriesList { sStatus :: Maybe B.ByteString
-                                 , sKind   :: Maybe B.ByteString
-                                 }
+                   | StoriesList (Maybe B.ByteString) (Maybe B.ByteString)
     deriving (Show)
 
 data Command = Stories StoriesOption
@@ -122,13 +120,13 @@ readerEnum xs = eitherReader pred'
                    else Left $ "cannot parse value `" ++ arg ++ "'"
 
 run :: App -> IO T.Text
-run app@(App token pid cmd) =
+run (App token pid cmd) =
     case cmd of
         Me -> run' me
-        Stories sl@(StoriesList status sType) -> do
-          run' stories (mkStoriesURL' (app ^. appProjectId) $ mkListParams sType status)
-        Stories sd@(StoriesDetail sId) ->
-          run' story (mkStoriesURL' (app ^. appProjectId) $ mkDetailParams)
+        Stories (StoriesList status sType) -> do
+          run' stories (mkStoriesURL' pid $ mkListParams sType status)
+        Stories (StoriesDetail sId) ->
+          run' story (mkStoriesURL' pid $ mkDetailParams sId)
         Projects -> run' myProjects
   where
-    run' f = f $ setToken (app ^. appToken) defaultOptions
+    run' f = f $ setToken token defaultOptions
