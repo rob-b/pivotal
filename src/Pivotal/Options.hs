@@ -2,7 +2,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Pivotal.Options
-  -- where
     ( execParser
     , run
     , optionsWithInfo
@@ -12,18 +11,18 @@ module Pivotal.Options
     , mkApp
     ) where
 
-import Pivotal.Lib (me, stories, myProjects, setToken, defaultOptions)
-import Pivotal.Url (mkStoriesURL', StoriesParams(..))
-import Options.Applicative
-import Options.Applicative.Types (readerAsk)
-import qualified Data.ByteString            as B
-import qualified Data.ByteString.Char8 as BC
-import qualified Data.Text             as T
-import Debug.Trace
-import Control.Lens hiding (argument)
+import           Pivotal.Lib               ( defaultOptions, me, myProjects
+                                           , setToken, stories )
+import           Pivotal.Url               ( StoriesParams(..), mkStoriesURL' )
+import           Options.Applicative
+import           Options.Applicative.Types ( readerAsk )
+import qualified Data.ByteString           as B
+import qualified Data.ByteString.Char8     as BC
+import qualified Data.Text                 as T
+import           Control.Lens              hiding ( argument )
 
-type ProjectId = BC.ByteString
-type Token = BC.ByteString
+type ProjectId = T.Text
+type Token = B.ByteString
 
 data StoriesOption = StoriesDetail Integer
                    | StoriesList { sStatus :: Maybe B.ByteString
@@ -94,10 +93,14 @@ commandParser = subparser $
         <> command "projects" (withInfo (pure Projects) "View user's projects")
 
 parseCommand :: Parser Options
-parseCommand = Options <$> optional (option readerByteString (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
+parseCommand = Options <$> optional (option readerText (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
                        <*> optional (option readerByteString (long "pivotal-token" <> help "Pivotal API token" <> metavar "TOKEN"))
                        <*> commandParser
 
+readerText :: ReadM T.Text
+readerText = do
+  s <- readerAsk
+  return $ T.pack s
 
 readerByteString :: ReadM BC.ByteString
 readerByteString = do
@@ -117,10 +120,10 @@ run :: App -> Options -> IO T.Text
 run app (Options _ _ cmd) =
     case cmd of
         Me -> run' me
-        Stories (StoriesList status sType) -> do
-            run' stories (mkStoriesURL' "xxxxxxx" $ StoriesParams sType status)
+        Stories sl@(StoriesList status sType) -> do
+          run' stories (mkStoriesURL' (app ^. appProjectId) $ StoriesParams sType status)
         Stories sd@(StoriesDetail _) ->
-            trace (show sd) (run' stories ("okok"))
+          run' stories ("okok")
         Projects -> run' myProjects
   where
     run' f = f $ setToken (app ^. appToken) defaultOptions
