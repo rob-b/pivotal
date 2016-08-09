@@ -50,10 +50,9 @@ data App = App { _appToken     :: Token
     deriving (Show)
 
 makeLenses ''Options
-makeLenses ''App
 
-mkStoriesList :: B.ByteString -> Command
-mkStoriesList s = Stories (StoriesList (Just s) Nothing)
+mkStoriesList :: B.ByteString -> Maybe B.ByteString -> StoriesOption
+mkStoriesList a b = StoriesList (Just a) b
 
 mkApp :: Token -> ProjectId -> Command -> App
 mkApp token projectId cmd =
@@ -91,11 +90,15 @@ storiesListParser :: Parser StoriesOption
 storiesListParser = StoriesList <$> optional (option (readerEnum storyStatuses) (long "status" <> help "Filter by status" <> metavar "status"))
                                 <*> optional (option (readerEnum storyKinds) (long "kind" <> help "Filter by kind"))
 
+storyParser :: B.ByteString -> Parser Command
+storyParser s = Stories <$> (fmap (mkStoriesList s)) (optional (option (readerEnum storyKinds) (long "type" <> help "Filter by story type [feature|bug|chore|release]")))
+
 commandParser :: Parser Command
 commandParser = subparser $
            command "stories" (withInfo storiesParser "View story")
-        <> command "todo" (withInfo (pure (mkStoriesList "unstarted")) "View unstarted stories")
-        <> command "started" (withInfo (pure (mkStoriesList "started")) "View started stories")
+        <> command "todo" (withInfo (storyParser "unstarted") "View unstarted stories")
+        <> command "started" (withInfo (storyParser "started") "View started stories")
+        <> command "finished" (withInfo (storyParser "finished") "View finished stories")
         <> command "profile" (withInfo (pure Me) "View user's profile")
         <> command "projects" (withInfo (pure Projects) "View user's projects")
 

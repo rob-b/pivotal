@@ -58,18 +58,7 @@ stories options url = do
       _ -> return $ decode (r ^. responseBody)
   where
     handle200 :: L.ByteString -> T.Text
-    handle200 body = F.format (storyDetailList body)
-
-    formatStoryDetails :: [(T.Text, T.Text, T.Text, T.Text, T.Text)] -> [T.Text]
-    formatStoryDetails = map formatSingleStory
-
-formatSingleStory :: (T.Text, T.Text, T.Text, T.Text, T.Text) -> T.Text
-formatSingleStory (name, current_state, story_type, _, story_id) =
-    sformat ("#" % stext % " " % (right 13 ' ') % (right 9 ' ') % stext)
-            story_id
-            current_state
-            story_type
-            name
+    handle200 = F.format . storyDetailList
 
 story :: Wreq.Options -> String -> IO T.Text
 story options url = do
@@ -80,14 +69,6 @@ story options url = do
       _ -> return $ decode (r ^. responseBody)
 
   where
-
-    fmt :: (T.Text, T.Text, T.Text, T.Text, T.Text) -> T.Text
-    fmt (name, state, type', desc, url') =
-      sformat("" % stext % "\n\nType: " % stext % "\nState: " % stext % "\n" % stext % "\n\n" % stext) (mkTitle name) type' state url' desc
-
-    mkTitle :: T.Text -> T.Text
-    mkTitle s = T.intercalate "\n" [s, T.replicate (T.length s) "*"]
-
     handle200 :: L.ByteString -> T.Text
     handle200 = F.format . storyDetail
 
