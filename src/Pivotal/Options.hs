@@ -52,6 +52,9 @@ data App = App { _appToken     :: Token
 makeLenses ''Options
 makeLenses ''App
 
+mkStoriesList :: B.ByteString -> Command
+mkStoriesList s = Stories (StoriesList (Just s) Nothing)
+
 mkApp :: Token -> ProjectId -> Command -> App
 mkApp token projectId cmd =
     App { _appToken = token, _appProjectId = projectId, _appCommand = cmd }
@@ -76,8 +79,7 @@ withInfo opts desc = info (helper <*> opts) $ progDesc desc
 optionsWithInfo :: ParserInfo Options
 optionsWithInfo = info (helper <*> parseCommand)
         (fullDesc
-        <> progDesc "Interact with pivotal tracker"
-        <> header "At the top")
+        <> progDesc "Interact with pivotal tracker")
 
 storiesParser :: Parser Command
 storiesParser = Stories <$> (storiesDetailParser <|> storiesListParser)
@@ -92,6 +94,8 @@ storiesListParser = StoriesList <$> optional (option (readerEnum storyStatuses) 
 commandParser :: Parser Command
 commandParser = subparser $
            command "stories" (withInfo storiesParser "View story")
+        <> command "todo" (withInfo (pure (mkStoriesList "unstarted")) "View unstarted stories")
+        <> command "started" (withInfo (pure (mkStoriesList "started")) "View started stories")
         <> command "profile" (withInfo (pure Me) "View user's profile")
         <> command "projects" (withInfo (pure Projects) "View user's projects")
 

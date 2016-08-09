@@ -3,21 +3,22 @@
 module Pivotal.Extract
     where
 
+import           Pivotal.Format
 import           Control.Lens
-import           Data.Aeson.Lens         ( _Array, _Integer, _String, key, AsValue )
-import qualified Data.Text               as T
-import           Data.Maybe              ( fromMaybe )
+import           Data.Aeson.Lens ( AsValue, _Array, _Integer, _String, key )
+import qualified Data.Text       as T
+import           Data.Maybe      ( fromMaybe )
 
-storyDetailList :: Data.Aeson.Lens.AsValue s => s -> [(T.Text, T.Text, T.Text, T.Text, T.Text)]
-storyDetailList r = r ^.. _Array . traverse . to storyDetail
+storyDetailList :: Data.Aeson.Lens.AsValue s => s -> StoryList
+storyDetailList r = StoryList (r ^.. _Array . traverse . to storyDetail)
 
-storyDetail :: Data.Aeson.Lens.AsValue s => s -> (T.Text, T.Text, T.Text, T.Text, T.Text)
-storyDetail r = ( r ^?! key "name" . _String
-                     , r ^?! key "current_state" . _String
-                     , r ^?! key "story_type" . _String
-                     , fromMaybe "" (r ^?  key "description" . _String)
-                     , r ^?! key "url" . _String
-                     )
+storyDetail :: Data.Aeson.Lens.AsValue s => s -> Story
+storyDetail r = Story (r ^?! key "name" . _String)
+                      (r ^?! key "current_state" . _String)
+                      (r ^?! key "story_type" . _String)
+                      (r ^?! key "id" . _Integer)
+                      (fromMaybe "" (r ^?  key "description" . _String))
+                      (r ^?! key "url" . _String)
 
 projectNames :: Data.Aeson.Lens.AsValue s => s -> [(Integer, T.Text)]
 projectNames r = r ^.. key "projects" . _Array . traverse .

@@ -11,19 +11,20 @@ module Pivotal.Lib
     , loadSample
     , projectNames
     ) where
-
-import Pivotal.Extract (storyDetail, storyDetailList, projectNames, errorMsg401)
+import           Formatting
+import           Pivotal.Extract         ( errorMsg401, projectNames
+                                         , storyDetail, storyDetailList )
 import           Network.Wreq            ( checkStatus, defaults, getWith
                                          , header, responseBody, responseStatus
                                          , statusCode )
 import           Control.Lens
+import qualified Pivotal.Format          as F
 import qualified Network.Wreq            as Wreq
 import qualified Data.Text.Lazy          as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text               as T
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as L
-import           Formatting
 
 -- | get info about the authenticated user
 me :: Wreq.Options -> IO T.Text
@@ -57,7 +58,7 @@ stories options url = do
       _ -> return $ decode (r ^. responseBody)
   where
     handle200 :: L.ByteString -> T.Text
-    handle200 body = (T.intercalate "\n" . formatStoryDetails . storyDetailList) body
+    handle200 body = F.format (storyDetailList body)
 
     formatStoryDetails :: [(T.Text, T.Text, T.Text, T.Text, T.Text)] -> [T.Text]
     formatStoryDetails = map formatSingleStory
@@ -88,7 +89,7 @@ story options url = do
     mkTitle s = T.intercalate "\n" [s, T.replicate (T.length s) "*"]
 
     handle200 :: L.ByteString -> T.Text
-    handle200 body = (fmt . storyDetail) body
+    handle200 = F.format . storyDetail
 
 decode :: L.ByteString -> T.Text
 decode = TL.toStrict . TL.decodeUtf8

@@ -22,6 +22,7 @@ library
                      , Pivotal.Options
                      , Pivotal.Url
                      , Pivotal.Extract
+                     , Pivotal.Format
                      , Pivotal
   build-depends:       base >= 4.7 && < 5
                      , wreq
