@@ -9,15 +9,14 @@ module Pivotal.Lib
     , defaultOptions
     , setToken
     , loadSample
+    , projectNames
     ) where
 
+import Pivotal.Extract (storyDetail, storyDetailList, projectNames, errorMsg401)
 import           Network.Wreq            ( checkStatus, defaults, getWith
                                          , header, responseBody, responseStatus
                                          , statusCode )
 import           Control.Lens
-import           Data.Aeson.Lens         ( _Array, _Integer, _String, key )
-import           Data.Maybe              ( fromMaybe )
-
 import qualified Network.Wreq            as Wreq
 import qualified Data.Text.Lazy          as TL
 import qualified Data.Text.Lazy.Encoding as TL
@@ -26,7 +25,7 @@ import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as L
 import           Formatting
 
--- | gest info about the authenticated user
+-- | get info about the authenticated user
 me :: Wreq.Options -> IO T.Text
 me options = do
     r <- getWith options "https://www.pivotaltracker.com/services/v5/me"
@@ -46,12 +45,6 @@ myProjects options = do
     formatSingleProject :: (Integer, T.Text) -> T.Text
     formatSingleProject (project_id, project_name) = sformat("#" % int % " " % stext) project_id project_name
 
-    projectNames :: L.ByteString -> [(Integer, T.Text)]
-    projectNames r = r ^.. key "projects" . _Array . traverse .
-        to (\o -> ( o ^?! key "project_id" . _Integer
-                  , o ^?! key "project_name" . _String
-                  ))
-
     handle200 :: L.ByteString -> T.Text
     handle200 body = T.intercalate "\n" (map formatSingleProject (projectNames body))
 
@@ -64,22 +57,14 @@ stories options url = do
       _ -> return $ decode (r ^. responseBody)
   where
     handle200 :: L.ByteString -> T.Text
-    handle200 body = (T.intercalate "\n" . formatStoryDetails . storyDetails) body
+    handle200 body = (T.intercalate "\n" . formatStoryDetails . storyDetailList) body
 
-    storyDetails :: L.ByteString -> [(T.Text, T.Text, T.Text, Integer)]
-    storyDetails r = r ^.. _Array . traverse .
-        to (\o -> ( o ^?! key "name" . _String
-                  , o ^?! key "current_state" . _String
-                  , o ^?! key "story_type" . _String
-                  , o ^?! key "id" . _Integer
-                  ))
-
-    formatStoryDetails :: [(T.Text, T.Text, T.Text, Integer)] -> [T.Text]
+    formatStoryDetails :: [(T.Text, T.Text, T.Text, T.Text, T.Text)] -> [T.Text]
     formatStoryDetails = map formatSingleStory
 
-formatSingleStory :: (T.Text, T.Text, T.Text, Integer) -> T.Text
-formatSingleStory (name, current_state, story_type, story_id) =
-    sformat ("#" % int % " " % (right 13 ' ') % (right 9 ' ') % stext)
+formatSingleStory :: (T.Text, T.Text, T.Text, T.Text, T.Text) -> T.Text
+formatSingleStory (name, current_state, story_type, _, story_id) =
+    sformat ("#" % stext % " " % (right 13 ' ') % (right 9 ' ') % stext)
             story_id
             current_state
             story_type
@@ -94,13 +79,6 @@ story options url = do
       _ -> return $ decode (r ^. responseBody)
 
   where
-    storyDetails :: L.ByteString -> (T.Text, T.Text, T.Text, T.Text, T.Text)
-    storyDetails r = ( r ^?! key "name" . _String
-                     , r ^?! key "current_state" . _String
-                     , r ^?! key "story_type" . _String
-                     , fromMaybe "" (r ^?  key "description" . _String)
-                     , r ^?! key "url" . _String
-                     )
 
     fmt :: (T.Text, T.Text, T.Text, T.Text, T.Text) -> T.Text
     fmt (name, state, type', desc, url') =
@@ -110,17 +88,13 @@ story options url = do
     mkTitle s = T.intercalate "\n" [s, T.replicate (T.length s) "*"]
 
     handle200 :: L.ByteString -> T.Text
-    handle200 body = (fmt . storyDetails) body
+    handle200 body = (fmt . storyDetail) body
 
 decode :: L.ByteString -> T.Text
 decode = TL.toStrict . TL.decodeUtf8
 
 handle401 :: L.ByteString -> T.Text
-handle401 response = T.intercalate " " [ errorMsg response, possibleFix response ]
-  where
-    extract r keyName = r ^. key keyName . _String
-    possibleFix r = extract r "possible_fix"
-    errorMsg r = extract r "error"
+handle401 response = T.intercalate " " (errorMsg401 response)
 
 loadSample :: IO L.ByteString
 loadSample = L.readFile "story.json"
