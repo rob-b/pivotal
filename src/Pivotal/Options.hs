@@ -104,7 +104,7 @@ commandParser = subparser $
 
 parseCommand :: Parser Options
 parseCommand = Options <$> optional (option readerText (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
-                       <*> optional (option readerByteString (long "pivotal-token" <> help "Pivotal API token" <> metavar "TOKEN"))
+                       <*> optional (option readerByteString (long "token" <> help "Pivotal API token" <> metavar "TOKEN"))
                        <*> commandParser
 
 readerText :: ReadM T.Text
