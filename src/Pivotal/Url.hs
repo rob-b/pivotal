@@ -5,6 +5,7 @@ module Pivotal.Url
     , mkStoriesURL'
     , mkListParams
     , mkDetailParams
+    , mkMembershipsURL
     ) where
 
 import           Network.HTTP.Types.URI
@@ -66,3 +67,7 @@ mkStoriesURL' projectId term = T.unpack $ mkStoriesURL projectId term
 storyPath :: Integral a => T.Text -> Maybe a -> [T.Text]
 storyPath projectId Nothing = joinPath [ "projects", projectId, "stories" ]
 storyPath projectId (Just s) = joinPath [ "projects", projectId, "stories", sformat("" % int) s ]
+
+mkMembershipsURL :: T.Text -> String
+mkMembershipsURL projectId = T.unpack .
+  combine . encodePathSegments $ joinPath [ "projects", projectId, "memberships" ]

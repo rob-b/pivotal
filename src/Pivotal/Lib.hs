@@ -6,17 +6,20 @@ module Pivotal.Lib
     , myProjects
     , stories
     , story
+    , projectMembers
     , defaultOptions
     , setToken
     , loadSample
     , projectNames
     ) where
 import           Formatting
-import           Pivotal.Extract         ( errorMsg401, projectNames
-                                         , storyDetail, storyDetailList )
+import           Pivotal.Extract         ( errorMsg401, personList
+                                         , projectNames, storyDetail
+                                         , storyDetailList )
 import           Network.Wreq            ( checkStatus, defaults, getWith
                                          , header, responseBody, responseStatus
                                          , statusCode )
+import           Data.Aeson              ( encode )
 import           Control.Lens
 import qualified Pivotal.Format          as F
 import qualified Network.Wreq            as Wreq
@@ -25,6 +28,9 @@ import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text               as T
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as L
+
+personFile :: FilePath
+personFile = ".people.json"
 
 -- | get info about the authenticated user
 me :: Wreq.Options -> IO T.Text
@@ -44,10 +50,12 @@ myProjects options = do
         _ -> return $ decode (r ^. responseBody)
   where
     formatSingleProject :: (Integer, T.Text) -> T.Text
-    formatSingleProject (project_id, project_name) = sformat("#" % int % " " % stext) project_id project_name
+    formatSingleProject (project_id, project_name) =
+        sformat ("#" % int % " " % stext) project_id project_name
 
     handle200 :: L.ByteString -> T.Text
-    handle200 body = T.intercalate "\n" (map formatSingleProject (projectNames body))
+    handle200 body = T.intercalate "\n"
+                                   (map formatSingleProject (projectNames body))
 
 stories :: Wreq.Options -> String -> IO T.Text
 stories options url = do
@@ -72,6 +80,19 @@ story options url = do
     handle200 :: L.ByteString -> T.Text
     handle200 = F.format . storyDetail
 
+projectMembers :: Wreq.Options -> String -> IO T.Text
+projectMembers options url = do
+  r <- getWith options url
+  case (r ^. responseStatus . statusCode) of
+      401 -> return $ handle401 (r ^. responseBody)
+      200 -> handle200 (r ^. responseBody)
+      _ -> return $ decode (r ^. responseBody)
+  where
+    handle200 :: L.ByteString -> IO T.Text
+    handle200 response = do
+      L.writeFile personFile $ encode (personList response)
+      return $ T.intercalate "\n" (map F.format (personList response))
+
 decode :: L.ByteString -> T.Text
 decode = TL.toStrict . TL.decodeUtf8
 
@@ -79,7 +100,7 @@ handle401 :: L.ByteString -> T.Text
 handle401 response = T.intercalate " " (errorMsg401 response)
 
 loadSample :: IO L.ByteString
-loadSample = L.readFile "story.json"
+loadSample = L.readFile "sample.json"
 
 defaultOptions :: Wreq.Options
 defaultOptions = setCheckStatus defaults

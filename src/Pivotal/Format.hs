@@ -3,6 +3,7 @@
 
 module Pivotal.Format ( StoryList(..), Story(..), format ) where
 
+import Pivotal.Person (Person(..))
 import qualified Data.Text    as T
 import           Control.Lens
 import           Formatting hiding( format)
@@ -32,6 +33,9 @@ instance Formattable Story where
 instance Formattable StoryList where
   format (StoryList xs) = T.intercalate "\n" (map fmtListItem xs)
 
+instance Formattable Person where
+  format (Person name initials id') =
+    sformat ("#" % int % " " % stext % " (" % stext % ")") id' name initials
 
 fmtListItem :: Story -> T.Text
 fmtListItem s =

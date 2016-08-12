@@ -13,9 +13,10 @@ module Pivotal.Options
     , ( ^. )
     ) where
 
-import           Pivotal.Lib               ( defaultOptions, me, myProjects
+import           Pivotal.Lib               ( defaultOptions, me, myProjects, projectMembers
                                            , setToken, stories, story )
 import           Pivotal.Url               ( mkDetailParams
+                                           , mkMembershipsURL
                                            , mkListParams, mkStoriesURL' )
 import           Options.Applicative
 import           Options.Applicative.Types ( readerAsk )
@@ -34,6 +35,7 @@ data StoriesOption = StoriesDetail Integer
 data Command = Stories StoriesOption
              | Me
              | Projects
+             | Setup
     deriving (Show)
 
 data Options = Options { _optionsProjectId :: (Maybe ProjectId)
@@ -41,7 +43,6 @@ data Options = Options { _optionsProjectId :: (Maybe ProjectId)
                        , _optionsCommand   :: Command
                        }
     deriving (Show)
-
 
 data App = App { _appToken     :: Token
                , _appProjectId :: ProjectId
@@ -101,6 +102,7 @@ commandParser = subparser $
         <> command "finished" (withInfo (storyParser "finished") "View finished stories")
         <> command "profile" (withInfo (pure Me) "View user's profile")
         <> command "projects" (withInfo (pure Projects) "View user's projects")
+        <> command "setup" (withInfo (pure Setup) "Create a local project file")
 
 parseCommand :: Parser Options
 parseCommand = Options <$> optional (option readerText (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
@@ -130,6 +132,7 @@ run :: App -> IO T.Text
 run (App token pid cmd) =
     case cmd of
         Me -> run' me
+        Setup -> run' projectMembers (mkMembershipsURL pid)
         Stories (StoriesList status sType) -> do
           run' stories (mkStoriesURL' pid $ mkListParams sType status)
         Stories (StoriesDetail sId) ->

@@ -23,6 +23,7 @@ library
                      , Pivotal.Url
                      , Pivotal.Extract
                      , Pivotal.Format
+                     , Pivotal.Person
                      , Pivotal
   build-depends:       base >= 4.7 && < 5
                      , wreq
@@ -36,6 +37,7 @@ library
                      , http-types
                      , either
                      , transformers
+                     , aeson
 
 executable pivotal
   default-language:    Haskell2010
