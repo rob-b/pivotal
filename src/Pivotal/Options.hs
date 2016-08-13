@@ -13,11 +13,10 @@ module Pivotal.Options
     , ( ^. )
     ) where
 
-import           Pivotal.Lib               ( defaultOptions, me, myProjects, projectMembers
-                                           , setToken, stories, story )
-import           Pivotal.Url               ( mkDetailParams
-                                           , mkMembershipsURL
-                                           , mkListParams, mkStoriesURL' )
+import           Pivotal.Lib
+import           Pivotal.Url               ( mkDetailParams, mkListParams
+                                           , mkMembershipsURL, mkStoriesURL' )
+import           Control.Monad.Reader
 import           Options.Applicative
 import           Options.Applicative.Types ( readerAsk )
 import           Control.Lens              hiding ( argument )
@@ -129,14 +128,13 @@ readerEnum xs = eitherReader pred'
                    else Left $ "cannot parse value `" ++ arg ++ "'"
 
 run :: App -> IO T.Text
-run (App token pid cmd) =
-    case cmd of
-        Me -> run' me
-        Setup -> run' projectMembers (mkMembershipsURL pid)
+run (App token pid cmd) = do
+  let (handler', url') = case cmd of
+        Setup -> (projectMembersHandler, (mkMembershipsURL pid))
         Stories (StoriesList status sType) -> do
-          run' stories (mkStoriesURL' pid $ mkListParams sType status)
+          (storiesHandler, (mkStoriesURL' pid $ mkListParams sType status))
         Stories (StoriesDetail sId) ->
-          run' story (mkStoriesURL' pid $ mkDetailParams sId)
-        Projects -> run' myProjects
-  where
-    run' f = f $ setToken token defaultOptions
+          (storyHandler, (mkStoriesURL' pid $ mkDetailParams sId))
+        Projects -> (myProjectsHandler, "https://www.pivotaltracker.com/services/v5/me")
+        Me -> (genericHandler, "https://www.pivotaltracker.com/services/v5/me")
+  runReaderT processEndpoint (mkConfig token url' handler')

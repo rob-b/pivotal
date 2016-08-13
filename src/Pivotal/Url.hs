@@ -50,11 +50,8 @@ mkStoriesURL :: T.Text -> StoriesParams -> T.Text
 mkStoriesURL projectId parameters
     | StoryDetailParams (DetailParams pid) <- parameters =
           combine $ encodePathSegments (storyPath projectId (Just pid))
-    | term@(StoryListParams (ListParams _ _)) <- parameters =
-          schemeAndLocation `T.append` (path term)
+    | otherwise = combine $ pathRaw parameters
   where
-    path :: StoriesParams -> T.Text
-    path term = decodeUtf8 $ BLC.toStrict (toLazyByteString (pathRaw term))
     pathRaw :: StoriesParams -> Builder
     pathRaw term = encodePath (joinPath [ "projects", projectId, "stories" ]) (params term)
 

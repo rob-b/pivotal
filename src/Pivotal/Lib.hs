@@ -2,16 +2,19 @@
 
 -- | A library to do stuff.
 module Pivotal.Lib
-    ( me
-    , myProjects
-    , stories
-    , story
-    , projectMembers
-    , defaultOptions
-    , setToken
-    , loadSample
-    , projectNames
+    (
+    -- Transform responses from wreq to formatted output
+      myProjectsHandler
+    , storiesHandler
+    , storyHandler
+    , projectMembersHandler
+    , genericHandler
+
+    -- convert a config to a Text of the response
+    , mkConfig
+    , processEndpoint
     ) where
+
 import           Formatting
 import           Pivotal.Extract         ( errorMsg401, personList
                                          , projectNames, storyDetail
@@ -28,79 +31,63 @@ import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text               as T
 import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as L
+import Control.Monad.Reader
+import Text.Show.Functions()
+
+type Handler = L.ByteString -> IO T.Text
+data Config = Config { cURL      :: String
+                     , cOptions  :: Wreq.Options
+                     , handle200 :: Handler
+                     }
+    deriving (Show)
 
 personFile :: FilePath
 personFile = ".people.json"
 
--- | get info about the authenticated user
-me :: Wreq.Options -> IO T.Text
-me options = do
-    r <- getWith options "https://www.pivotaltracker.com/services/v5/me"
-    case (r ^. responseStatus . statusCode) of
-      401 -> return $ handle401 (r ^. responseBody)
-      _ -> return $ decode (r ^. responseBody)
+mkConfig :: B.ByteString -> String -> Handler -> Config
+mkConfig token url f = Config { cURL = url
+                              , cOptions = setToken token defaultOptions
+                              , handle200 = f
+                              }
 
--- | get info about the authenticated user's projects
-myProjects :: Wreq.Options -> IO T.Text
-myProjects options = do
-    r <- getWith options "https://www.pivotaltracker.com/services/v5/me"
-    case (r ^. responseStatus . statusCode) of
-        401 -> return $ handle401 (r ^. responseBody)
-        200 -> return $ handle200 (r ^. responseBody)
-        _ -> return $ decode (r ^. responseBody)
-  where
-    formatSingleProject :: (Integer, T.Text) -> T.Text
-    formatSingleProject (project_id, project_name) =
-        sformat ("#" % int % " " % stext) project_id project_name
+processEndpoint :: ReaderT Config IO T.Text
+processEndpoint = do
+  config <- ask
+  res <- liftIO $ doRequest (cOptions config) (cURL config) (handle200 config)
+  return res
 
-    handle200 :: L.ByteString -> T.Text
-    handle200 body = T.intercalate "\n"
-                                   (map formatSingleProject (projectNames body))
-
-stories :: Wreq.Options -> String -> IO T.Text
-stories options url = do
+doRequest :: Wreq.Options -> String -> Handler -> IO T.Text
+doRequest options url handler = do
   r <- getWith options url
   case (r ^. responseStatus . statusCode) of
-      401 -> return $ handle401 (r ^. responseBody)
-      200 -> return $ handle200 (r ^. responseBody)
-      _ -> return $ decode (r ^. responseBody)
-  where
-    handle200 :: L.ByteString -> T.Text
-    handle200 = F.format . storyDetailList
+    x | x `elem` [400..499] -> handle4xx (r ^. responseBody)
+    200 -> handler (r ^. responseBody)
+    _ -> genericHandler (r ^. responseBody)
 
-story :: Wreq.Options -> String -> IO T.Text
-story options url = do
-  r <- getWith options url
-  case (r ^. responseStatus . statusCode) of
-      401 -> return $ handle401 (r ^. responseBody)
-      200 -> return $ handle200 (r ^. responseBody)
-      _ -> return $ decode (r ^. responseBody)
+formatSingleProject :: (Integer, T.Text) -> T.Text
+formatSingleProject (project_id, project_name) =
+    sformat ("#" % int % " " % stext) project_id project_name
 
-  where
-    handle200 :: L.ByteString -> T.Text
-    handle200 = F.format . storyDetail
+myProjectsHandler :: L.ByteString -> IO T.Text
+myProjectsHandler body =
+    return $ T.intercalate "\n" (map formatSingleProject (projectNames body))
 
-projectMembers :: Wreq.Options -> String -> IO T.Text
-projectMembers options url = do
-  r <- getWith options url
-  case (r ^. responseStatus . statusCode) of
-      401 -> return $ handle401 (r ^. responseBody)
-      200 -> handle200 (r ^. responseBody)
-      _ -> return $ decode (r ^. responseBody)
-  where
-    handle200 :: L.ByteString -> IO T.Text
-    handle200 response = do
-      L.writeFile personFile $ encode (personList response)
-      return $ T.intercalate "\n" (map F.format (personList response))
+storiesHandler :: L.ByteString -> IO T.Text
+storiesHandler = return . F.format . storyDetailList
 
-decode :: L.ByteString -> T.Text
-decode = TL.toStrict . TL.decodeUtf8
+storyHandler :: L.ByteString -> IO T.Text
+storyHandler = return . F.format . storyDetail
 
-handle401 :: L.ByteString -> T.Text
-handle401 response = T.intercalate " " (errorMsg401 response)
+projectMembersHandler :: L.ByteString -> IO T.Text
+projectMembersHandler response = do
+  L.writeFile personFile $ encode (personList response)
+  return $ T.intercalate "\n" (map F.format (personList response))
 
-loadSample :: IO L.ByteString
-loadSample = L.readFile "sample.json"
+genericHandler :: L.ByteString -> IO T.Text
+genericHandler = return . TL.toStrict . TL.decodeUtf8
+
+handle4xx :: L.ByteString -> IO T.Text
+handle4xx response = return $ T.intercalate " " (errorMsg401 response)
 
 defaultOptions :: Wreq.Options
 defaultOptions = setCheckStatus defaults
@@ -111,8 +98,3 @@ setCheckStatus options =
 
 setToken :: B.ByteString -> Wreq.Options -> Wreq.Options
 setToken token options = options & header "X-TrackerToken" .~ [token]
-
--- simpleApiRequest :: Response L.ByteString -> IO T.Text
--- simpleApiRequest r = case (r ^. responseStatus . statusCode) of
---     401 -> return $ handle401 (r ^. responseBody)
---     _ -> return $ decode (r ^. responseBody)

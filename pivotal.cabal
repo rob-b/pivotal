@@ -38,6 +38,7 @@ library
                      , either
                      , transformers
                      , aeson
+                     , mtl
 
 executable pivotal
   default-language:    Haskell2010
