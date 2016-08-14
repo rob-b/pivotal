@@ -24,6 +24,7 @@ library
                      , Pivotal.Extract
                      , Pivotal.Format
                      , Pivotal.Person
+                     , Pivotal.Types
                      , Pivotal
   build-depends:       base >= 4.7 && < 5
                      , wreq

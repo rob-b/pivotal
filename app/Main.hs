@@ -1,8 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Pivotal               ( (^.), Options(..), execParser, mkApp
-                                       , optionsCommand, optionsWithInfo, run )
+import           Pivotal               ( (^.), ProjectId(..), Token(..)
+                                       , execParser, mkApp, optionsCommand
+                                       , optionsProjectId, optionsToken
+                                       , optionsWithInfo, run )
 import           System.Environment    ( lookupEnv )
 import           System.Exit           ( ExitCode(ExitFailure), exitWith )
 import           Control.Applicative   ( (<|>) )
@@ -12,8 +14,8 @@ import qualified Data.Text             as T
 
 main :: IO ()
 main = do
-    maybeEnvToken <- lookupEnvWith BC.pack "PIVOTAL_TOKEN"
-    maybeEnvProjectId <- lookupEnvWith T.pack "PIVOTAL_PROJECT_ID"
+    maybeEnvToken <- lookupEnvWith (\a -> Token $ BC.pack a) "PIVOTAL_TOKEN"
+    maybeEnvProjectId <- lookupEnvWith (\a -> ProjectId $ T.pack a) "PIVOTAL_PROJECT_ID"
 
     -- Get the ARGV values. When determining the token|project-id to use we prefer:
     -- 1. ARGV
@@ -22,8 +24,8 @@ main = do
     options <- execParser optionsWithInfo
 
     -- FIXME: some commands don't need token + project-id
-    bestToken <- failIf (_optionsToken options <|> maybeEnvToken) "Must set PIVOTAL_TOKEN"
-    bestProjectId <- failIf (_optionsProjectId options <|> maybeEnvProjectId) "Must set PIVOTAL_PROJECT_ID"
+    bestToken <- failIf (options ^. optionsToken <|> maybeEnvToken) "Must set PIVOTAL_TOKEN"
+    bestProjectId <- failIf (options ^. optionsProjectId <|> maybeEnvProjectId) "Must set PIVOTAL_PROJECT_ID"
     let app = mkApp bestToken bestProjectId (options ^. optionsCommand)
     run app >>= TIO.putStrLn
   where

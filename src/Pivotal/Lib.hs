@@ -19,9 +19,9 @@ import           Formatting
 import           Pivotal.Extract         ( errorMsg401, personList
                                          , projectNames, storyDetail
                                          , storyDetailList )
-import           Network.Wreq            ( checkStatus, defaults, getWith
-                                         , header, responseBody, responseStatus
-                                         , statusCode )
+import           Pivotal.Types
+import           Network.Wreq            ( getWith, responseBody
+                                         , responseStatus, statusCode )
 import           Data.Aeson              ( encode )
 import           Control.Lens
 import qualified Pivotal.Format          as F
@@ -29,26 +29,11 @@ import qualified Network.Wreq            as Wreq
 import qualified Data.Text.Lazy          as TL
 import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text               as T
-import qualified Data.ByteString         as B
 import qualified Data.ByteString.Lazy    as L
-import Control.Monad.Reader
-import Text.Show.Functions()
-
-type Handler = L.ByteString -> IO T.Text
-data Config = Config { cURL      :: String
-                     , cOptions  :: Wreq.Options
-                     , handle200 :: Handler
-                     }
-    deriving (Show)
+import           Control.Monad.Reader
 
 personFile :: FilePath
 personFile = ".people.json"
-
-mkConfig :: B.ByteString -> String -> Handler -> Config
-mkConfig token url f = Config { cURL = url
-                              , cOptions = setToken token defaultOptions
-                              , handle200 = f
-                              }
 
 processEndpoint :: ReaderT Config IO T.Text
 processEndpoint = do
@@ -61,7 +46,7 @@ doRequest options url handler = do
   r <- getWith options url
   case (r ^. responseStatus . statusCode) of
     x | x `elem` [400..499] -> handle4xx (r ^. responseBody)
-    200 -> handler (r ^. responseBody)
+    200 -> unHandler handler (r ^. responseBody)
     _ -> genericHandler (r ^. responseBody)
 
 formatSingleProject :: (Integer, T.Text) -> T.Text
@@ -88,13 +73,3 @@ genericHandler = return . TL.toStrict . TL.decodeUtf8
 
 handle4xx :: L.ByteString -> IO T.Text
 handle4xx response = return $ T.intercalate " " (errorMsg401 response)
-
-defaultOptions :: Wreq.Options
-defaultOptions = setCheckStatus defaults
-
-setCheckStatus :: Wreq.Options -> Wreq.Options
-setCheckStatus options =
-    options & checkStatus .~ (Just $ \_ _ _ -> Nothing)
-
-setToken :: B.ByteString -> Wreq.Options -> Wreq.Options
-setToken token options = options & header "X-TrackerToken" .~ [token]

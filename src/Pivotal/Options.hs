@@ -5,17 +5,18 @@ module Pivotal.Options
     ( execParser
     , run
     , optionsWithInfo
-    , App(..)
-    , Options(..)
     , Command(..)
     , mkApp
     , optionsCommand
+    , optionsToken
+    , optionsProjectId
     , ( ^. )
     ) where
 
 import           Pivotal.Lib
 import           Pivotal.Url               ( mkDetailParams, mkListParams
                                            , mkMembershipsURL, mkStoriesURL' )
+import           Pivotal.Types
 import           Control.Monad.Reader
 import           Options.Applicative
 import           Options.Applicative.Types ( readerAsk )
@@ -23,9 +24,6 @@ import           Control.Lens              hiding ( argument )
 import qualified Data.ByteString           as B
 import qualified Data.ByteString.Char8     as BC
 import qualified Data.Text                 as T
-
-type ProjectId = T.Text
-type Token = B.ByteString
 
 data StoriesOption = StoriesDetail Integer
                    | StoriesList (Maybe B.ByteString) (Maybe B.ByteString)
@@ -104,19 +102,15 @@ commandParser = subparser $
         <> command "setup" (withInfo (pure Setup) "Create a local project file")
 
 parseCommand :: Parser Options
-parseCommand = Options <$> optional (option readerText (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
-                       <*> optional (option readerByteString (long "token" <> help "Pivotal API token" <> metavar "TOKEN"))
+parseCommand = Options <$> optional (option ( fmap ProjectId readerText) (long "project-id" <> help "Project id" <> metavar "PROJECTID"))
+                       <*> optional (option (fmap Token readerByteString) (long "token" <> help "Pivotal API token" <> metavar "TOKEN"))
                        <*> commandParser
 
 readerText :: ReadM T.Text
-readerText = do
-  s <- readerAsk
-  return $ T.pack s
+readerText = T.pack <$> readerAsk
 
 readerByteString :: ReadM BC.ByteString
-readerByteString = do
-  s <- readerAsk
-  return $ BC.pack s
+readerByteString = BC.pack <$> readerAsk
 
 readerEnum :: Foldable t => t B.ByteString -> ReadM B.ByteString
 readerEnum xs = eitherReader pred'
