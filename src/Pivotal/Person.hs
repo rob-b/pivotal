@@ -5,6 +5,8 @@ module Pivotal.Person ( Person(..) ) where
 
 import           GHC.Generics
 import           Data.Aeson
+import           Data.Aeson.Types
+import           Data.Char (toLower)
 import qualified Data.Text    as T
 
 data Person = Person { userName     :: T.Text
@@ -13,5 +15,6 @@ data Person = Person { userName     :: T.Text
                      }
     deriving (Generic, Show)
 
-instance ToJSON Person
 instance FromJSON Person
+instance ToJSON Person where
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = (\s -> (drop 4 . map toLower) s) }

@@ -20,6 +20,7 @@ storyDetail r = Story (r ^?! key "name" . _String)
                       (r ^?! key "id" . _Integer)
                       (fromMaybe "" (r ^?  key "description" . _String))
                       (r ^?! key "url" . _String)
+                      (r ^.. key "owner_ids" . _Array . traverse . _Integer)
 
 projectNames :: Data.Aeson.Lens.AsValue s => s -> [(Integer, T.Text)]
 projectNames r = r ^.. key "projects" . _Array . traverse .
@@ -44,3 +45,6 @@ person r = maybePerson (r ^? key "name" . _String, r ^? key "initials" . _String
     maybePerson :: (Maybe T.Text, Maybe T.Text, Maybe Integer) -> Maybe Person
     maybePerson (Just n, Just i, Just i') = Just $ Person n i i'
     maybePerson (_, _, _)                 = Nothing
+
+flatPerson :: AsValue s => s -> [Person]
+flatPerson r = catMaybes $ r ^..  _Array . traverse . to person

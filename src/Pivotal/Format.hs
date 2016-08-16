@@ -14,6 +14,7 @@ data Story = Story { _storyName        :: T.Text
                    , _storyId          :: Integer
                    , _storyDescription :: T.Text
                    , _storyURL         :: T.Text
+                   , _storyOwners      :: [Integer]
                    }
     deriving (Show)
 
@@ -26,9 +27,13 @@ class Formattable a where
   format :: a -> T.Text
 
 instance Formattable Story where
-  format (Story n s t _ d u) =
-      sformat ("" % stext % "\n\nType: " % stext % "\nState: " % stext % "\n" % stext % "\n\n" % stext)
-              (mkTitle n) t s u d
+  format story = sformat ("" % stext % "\n\nType: " % stext % "\nState: " % stext % "\nOwners: " % stext % "\n" % stext % "\n\n" % stext)
+                         (mkTitle $ story ^. storyName)
+                         (story ^. storyType)
+                         (story ^. storyState)
+                         (mkOwners $ story ^. storyOwners)
+                         (story ^. storyURL)
+                         (story ^. storyDescription)
 
 instance Formattable StoryList where
   format (StoryList xs) = T.intercalate "\n" (map fmtListItem xs)
@@ -48,3 +53,6 @@ fmtListItem s =
 
 mkTitle :: T.Text -> T.Text
 mkTitle s = T.intercalate "\n" [s, T.replicate (T.length s) "*"]
+
+mkOwners :: [Integer] -> T.Text
+mkOwners xs = T.intercalate ", " $ (map (\e -> sformat(int) e) xs)
