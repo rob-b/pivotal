@@ -98,6 +98,7 @@ commandParser = subparser $
         <> command "started" (withInfo (storyParser "started") "View started stories")
         <> command "finished" (withInfo (storyParser "finished") "View finished stories")
         <> command "delivered" (withInfo (storyParser "delivered") "View delivered stories")
+        <> command "icebox" (withInfo (storyParser "unscheduled") "View delivered stories")
         <> command "profile" (withInfo (pure Me) "View user's profile")
         <> command "projects" (withInfo (pure Projects) "View user's projects")
         <> command "setup" (withInfo (pure Setup) "Create a local project file")
