@@ -2,7 +2,7 @@ name:                pivotal
 version:             0.1.0.0
 synopsis:            TODO Initial project template from stack
 description:         Please see README.md
-homepage:            https://github.com/githubuser/pivotal
+homepage:            https://github.com/rob-b/pivotal
 license:             BSD3
 license-file:        LICENSE
 author:              Author name here
@@ -64,4 +64,4 @@ test-suite spec
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/pivotal
+  location: https://github.com/rob-b/pivotal
