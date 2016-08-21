@@ -11,16 +11,19 @@ import qualified Data.Text       as T
 import           Data.Maybe      ( catMaybes, fromMaybe )
 
 storyDetailList :: Data.Aeson.Lens.AsValue s => s -> StoryList
-storyDetailList r = StoryList (r ^.. _Array . traverse . to storyDetail)
+storyDetailList r = StoryList (r ^.. _Array . traverse . to (storyDetail []))
 
-storyDetail :: Data.Aeson.Lens.AsValue s => s -> Story
-storyDetail r = Story (r ^?! key "name" . _String)
+storyDetail :: Data.Aeson.Lens.AsValue s => [Person] -> s -> Story
+storyDetail people r = Story (r ^?! key "name" . _String)
                       (r ^?! key "current_state" . _String)
                       (r ^?! key "story_type" . _String)
                       (r ^?! key "id" . _Integer)
                       (fromMaybe "" (r ^?  key "description" . _String))
                       (r ^?! key "url" . _String)
-                      (r ^.. key "owner_ids" . _Array . traverse . _Integer)
+                      merged
+    where
+        owner_ids = (r ^.. key "owner_ids" . _Array . traverse . _Integer)
+        merged = merge owner_ids people
 
 projectNames :: Data.Aeson.Lens.AsValue s => s -> [(Integer, T.Text)]
 projectNames r = r ^.. key "projects" . _Array . traverse .
@@ -48,3 +51,6 @@ person r = maybePerson (r ^? key "name" . _String, r ^? key "initials" . _String
 
 flatPerson :: AsValue s => s -> [Person]
 flatPerson r = catMaybes $ r ^..  _Array . traverse . to person
+
+merge :: Foldable t => t Integer -> [Person] -> [Person]
+merge xs ps = filter (\p -> userID p `elem` xs) ps

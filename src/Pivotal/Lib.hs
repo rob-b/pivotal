@@ -18,6 +18,7 @@ module Pivotal.Lib
 import           Formatting
 import           Pivotal.Extract         ( errorMsg401, personList
                                          , projectNames, storyDetail
+                                         , flatPerson
                                          , storyDetailList )
 import           Pivotal.Types
 import           Network.Wreq            ( getWith, responseBody
@@ -34,6 +35,8 @@ import           Control.Monad.Reader
 
 personFile :: FilePath
 personFile = ".people.json"
+
+loadPersonFile = flatPerson <$> L.readFile personFile
 
 processEndpoint :: ReaderT Config IO T.Text
 processEndpoint = do
@@ -61,7 +64,7 @@ storiesHandler :: L.ByteString -> IO T.Text
 storiesHandler = return . F.format . storyDetailList
 
 storyHandler :: L.ByteString -> IO T.Text
-storyHandler = return . F.format . storyDetail
+storyHandler bs = F.format <$> fmap (`storyDetail` bs) loadPersonFile
 
 projectMembersHandler :: L.ByteString -> IO T.Text
 projectMembersHandler response = do

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Pivotal.Format ( StoryList(..), Story(..), format ) where
+module Pivotal.Format ( StoryList(..), Story(..), storyOwners, format ) where
 
 import Pivotal.Person (Person(..))
 import qualified Data.Text    as T
@@ -14,7 +14,7 @@ data Story = Story { _storyName        :: T.Text
                    , _storyId          :: Integer
                    , _storyDescription :: T.Text
                    , _storyURL         :: T.Text
-                   , _storyOwners      :: [Integer]
+                   , _storyOwners      :: [Person]
                    }
     deriving (Show)
 
@@ -54,5 +54,5 @@ fmtListItem s =
 mkTitle :: T.Text -> T.Text
 mkTitle s = T.intercalate "\n" [s, T.replicate (T.length s) "*"]
 
-mkOwners :: [Integer] -> T.Text
-mkOwners xs = T.intercalate ", " $ (map (\e -> sformat(int) e) xs)
+mkOwners :: [Person] -> T.Text
+mkOwners xs = T.intercalate ", " $ (map userName xs)
