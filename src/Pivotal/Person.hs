@@ -17,4 +17,4 @@ data Person = Person { userName     :: T.Text
 
 instance FromJSON Person
 instance ToJSON Person where
-  toJSON = genericToJSON defaultOptions { fieldLabelModifier = (\s -> (drop 4 . map toLower) s) }
+  toJSON = genericToJSON defaultOptions { fieldLabelModifier = drop 4 . map toLower }

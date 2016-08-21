@@ -19,7 +19,7 @@ import qualified Data.ByteString.Lazy.Char8 as BLC
 import qualified Data.ByteString            as B
 
 mkListParams :: Maybe B.ByteString -> Maybe B.ByteString -> StoriesParams
-mkListParams t s = StoryListParams $ ListParams { storyType = t, storyState = s }
+mkListParams t s = StoryListParams ListParams { storyType = t, storyState = s }
 
 mkDetailParams :: Integer -> StoriesParams
 mkDetailParams storyId = StoryDetailParams (DetailParams storyId)
@@ -38,12 +38,12 @@ joinPath projectId segments = ["services", "v5", "projects", unProjectId project
 
 mkStoriesURL :: ProjectId -> StoriesParams -> T.Text
 mkStoriesURL projectId parameters
-    | StoryDetailParams (DetailParams pid) <- parameters =
-          combine $ encodePathSegments (storyPath projectId (Just pid))
-    | otherwise = combine $ pathRaw parameters
+  | StoryDetailParams (DetailParams pid) <- parameters =
+    combine $ encodePathSegments (storyPath projectId (Just pid))
+  | otherwise = combine $ pathRaw parameters
   where
     pathRaw :: StoriesParams -> Builder
-    pathRaw term = encodePath (joinPath projectId ["stories" ]) (params term)
+    pathRaw term = encodePath (joinPath projectId ["stories"]) (params term)
 
 combine :: Builder -> T.Text
 combine b = T.append schemeAndLocation . decodeUtf8 . BLC.toStrict $ toLazyByteString b

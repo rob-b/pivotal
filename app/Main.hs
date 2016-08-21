@@ -14,8 +14,8 @@ import qualified Data.Text             as T
 
 main :: IO ()
 main = do
-    maybeEnvToken <- lookupEnvWith (\a -> Token $ BC.pack a) "PIVOTAL_TOKEN"
-    maybeEnvProjectId <- lookupEnvWith (\a -> ProjectId $ T.pack a) "PIVOTAL_PROJECT_ID"
+    maybeEnvToken <- lookupEnvWith (Token . BC.pack) "PIVOTAL_TOKEN"
+    maybeEnvProjectId <- lookupEnvWith (ProjectId . T.pack) "PIVOTAL_PROJECT_ID"
 
     -- Get the ARGV values. When determining the token|project-id to use we prefer:
     -- 1. ARGV

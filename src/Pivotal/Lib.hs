@@ -41,13 +41,12 @@ loadPersonFile = flatPerson <$> L.readFile personFile
 processEndpoint :: ReaderT Config IO T.Text
 processEndpoint = do
   config <- ask
-  res <- liftIO $ doRequest (cOptions config) (cURL config) (handle200 config)
-  return res
+  liftIO $ doRequest (cOptions config) (cURL config) (handle200 config)
 
 doRequest :: Wreq.Options -> String -> Handler -> IO T.Text
 doRequest options url handler = do
   r <- getWith options url
-  case (r ^. responseStatus . statusCode) of
+  case r ^. responseStatus . statusCode of
     x | x `elem` [400..499] -> handle4xx (r ^. responseBody)
     200 -> unHandler handler (r ^. responseBody)
     _ -> genericHandler (r ^. responseBody)

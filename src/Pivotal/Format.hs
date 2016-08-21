@@ -44,7 +44,7 @@ instance Formattable Person where
 
 fmtListItem :: Story -> T.Text
 fmtListItem s =
-    sformat ("#" % int % " " % (right 13 ' ') % (right 9 ' ') % stext)
+    sformat ("#" % int % " " % right 13 ' ' % right 9 ' ' % stext)
             (s ^. storyId)
             (s ^. storyState)
             (s ^. storyType)
@@ -55,4 +55,4 @@ mkTitle :: T.Text -> T.Text
 mkTitle s = T.intercalate "\n" [s, T.replicate (T.length s) "*"]
 
 mkOwners :: [Person] -> T.Text
-mkOwners xs = T.intercalate ", " $ (map userName xs)
+mkOwners xs = T.intercalate ", " $ map userName xs

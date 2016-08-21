@@ -22,7 +22,7 @@ storyDetail people r = Story (r ^?! key "name" . _String)
                       (r ^?! key "url" . _String)
                       merged
     where
-        owner_ids = (r ^.. key "owner_ids" . _Array . traverse . _Integer)
+        owner_ids = r ^.. key "owner_ids" . _Array . traverse . _Integer
         merged = merge owner_ids people
 
 projectNames :: Data.Aeson.Lens.AsValue s => s -> [(Integer, T.Text)]
@@ -53,4 +53,4 @@ flatPerson :: AsValue s => s -> [Person]
 flatPerson r = catMaybes $ r ^..  _Array . traverse . to person
 
 merge :: Foldable t => t Integer -> [Person] -> [Person]
-merge xs ps = filter (\p -> userID p `elem` xs) ps
+merge xs = filter (\p -> userID p `elem` xs)

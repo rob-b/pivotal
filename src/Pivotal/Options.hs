@@ -35,8 +35,8 @@ data Command = Stories StoriesOption
              | Setup
     deriving (Show)
 
-data Options = Options { _optionsProjectId :: (Maybe ProjectId)
-                       , _optionsToken     :: (Maybe Token)
+data Options = Options { _optionsProjectId :: Maybe ProjectId
+                       , _optionsToken     :: Maybe Token
                        , _optionsCommand   :: Command
                        }
     deriving (Show)
@@ -50,7 +50,7 @@ data App = App { _appToken     :: Token
 makeLenses ''Options
 
 mkStoriesList :: B.ByteString -> Maybe B.ByteString -> StoriesOption
-mkStoriesList a b = StoriesList (Just a) b
+mkStoriesList a = StoriesList (Just a)
 
 mkApp :: Token -> ProjectId -> Command -> App
 mkApp token projectId cmd =
@@ -89,7 +89,7 @@ storiesListParser = StoriesList <$> optional (option (readerEnum storyStatuses) 
                                 <*> optional (option (readerEnum storyKinds) (long "kind" <> help "Filter by kind"))
 
 storyParser :: B.ByteString -> Parser Command
-storyParser s = Stories <$> (fmap (mkStoriesList s)) (optional (option (readerEnum storyKinds) (long "type" <> help "Filter by story type [feature|bug|chore|release]")))
+storyParser s = Stories <$> fmap (mkStoriesList s) (optional (option (readerEnum storyKinds) (long "type" <> help "Filter by story type [feature|bug|chore|release]")))
 
 commandParser :: Parser Command
 commandParser = subparser $
@@ -125,12 +125,15 @@ readerEnum xs = eitherReader pred'
 
 run :: App -> IO T.Text
 run (App token pid cmd) = do
-  let (handler', url') = case cmd of
-        Setup -> (projectMembersHandler, (mkMembershipsURL pid))
-        Stories (StoriesList status sType) -> do
-          (storiesHandler, (mkStoriesURL' pid $ mkListParams sType status))
-        Stories (StoriesDetail sId) ->
-          (storyHandler, (mkStoriesURL' pid $ mkDetailParams sId))
-        Projects -> (myProjectsHandler, "https://www.pivotaltracker.com/services/v5/me")
-        Me -> (genericHandler, "https://www.pivotaltracker.com/services/v5/me")
+  let (handler', url') =
+        case cmd of
+          Setup -> (projectMembersHandler, mkMembershipsURL pid)
+          Stories (StoriesList status sType) ->
+            (storiesHandler, mkStoriesURL' pid $ mkListParams sType status)
+          Stories (StoriesDetail sId) ->
+            (storyHandler, mkStoriesURL' pid $ mkDetailParams sId)
+          Projects ->
+            (myProjectsHandler, "https://www.pivotaltracker.com/services/v5/me")
+          Me ->
+            (genericHandler, "https://www.pivotaltracker.com/services/v5/me")
   runReaderT processEndpoint (mkConfig token url' handler')
