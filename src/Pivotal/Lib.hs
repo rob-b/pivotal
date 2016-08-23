@@ -36,7 +36,7 @@ import           Control.Monad.Reader
 personFile :: FilePath
 personFile = ".people.json"
 
-# FIXME: Handle case where this file does not exist
+-- FIXME: Handle case where this file does not exist
 loadPersonFile = flatPerson <$> L.readFile personFile
 
 processEndpoint :: ReaderT Config IO T.Text
