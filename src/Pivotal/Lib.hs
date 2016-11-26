@@ -24,6 +24,7 @@ import Network.Wreq
 import Data.Aeson (encode)
 import Control.Lens
 import qualified Pivotal.Format as F
+import qualified Pivotal.Person as P
 import qualified Network.Wreq as Wreq
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
@@ -35,6 +36,7 @@ personFile :: FilePath
 personFile = ".people.json"
 
 -- FIXME: Handle case where this file does not exist
+loadPersonFile :: IO [P.Person]
 loadPersonFile = flatPerson <$> L.readFile personFile
 
 processEndpoint :: ReaderT Config IO T.Text
@@ -60,10 +62,10 @@ myProjectsHandler body =
   return $ T.intercalate "\n" (map formatSingleProject (projectNames body))
 
 storiesHandler :: L.ByteString -> IO T.Text
-storiesHandler = return . F.format . storyDetailList
+storiesHandler bs = fmap (F.format . (`storyDetailList` bs)) loadPersonFile
 
 storyHandler :: L.ByteString -> IO T.Text
-storyHandler bs = F.format <$> fmap (`storyDetail` bs) loadPersonFile
+storyHandler bs = fmap (F.format . (`storyDetail` bs)) loadPersonFile
 
 projectMembersHandler :: L.ByteString -> IO T.Text
 projectMembersHandler response = do

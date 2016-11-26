@@ -10,8 +10,8 @@ import Data.Aeson.Lens (AsValue, _Array, _Integer, _String, key)
 import qualified Data.Text as T
 import Data.Maybe (catMaybes, fromMaybe)
 
-storyDetailList :: Data.Aeson.Lens.AsValue s => s -> StoryList
-storyDetailList r = StoryList (r ^.. _Array . traverse . to (storyDetail []))
+storyDetailList :: Data.Aeson.Lens.AsValue s => [Person] -> s -> StoryList
+storyDetailList people r = StoryList (r ^.. _Array . traverse . to (storyDetail people))
 
 storyDetail :: Data.Aeson.Lens.AsValue s => [Person] -> s -> Story
 storyDetail people r =
