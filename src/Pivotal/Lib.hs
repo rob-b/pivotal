@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveDataTypeable #-}
 
 -- | A library to do stuff.
 module Pivotal.Lib
@@ -34,22 +33,11 @@ import qualified Data.Text               as T
 import qualified Data.ByteString.Lazy    as L
 import           Control.Monad.Reader
 
-import Pivotal.Person (Person)
-import Control.Monad.Catch hiding (Handler)
-import Data.Typeable
-
 personFile :: FilePath
 personFile = ".people.json"
 
 -- FIXME: Handle case where this file does not exist
-loadPersonFile :: IO [Person]
 loadPersonFile = flatPerson <$> L.readFile personFile
-
-data SomethingBad = SomethingBad
-    deriving Typeable
-instance Show SomethingBad where
-    show SomethingBad = "something bad happened"
-instance Exception SomethingBad
 
 processEndpoint :: ReaderT Config IO T.Text
 processEndpoint = do
@@ -76,7 +64,7 @@ storiesHandler :: L.ByteString -> IO T.Text
 storiesHandler = return . F.format . storyDetailList
 
 storyHandler :: L.ByteString -> IO T.Text
-storyHandler bs = F.format <$> fmap (`storyDetail` bs) undefined
+storyHandler bs = F.format <$> fmap (`storyDetail` bs) loadPersonFile
 
 projectMembersHandler :: L.ByteString -> IO T.Text
 projectMembersHandler response = do
