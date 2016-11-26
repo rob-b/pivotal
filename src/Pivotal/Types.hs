@@ -3,6 +3,7 @@
 module Pivotal.Types
   where
 
+import Pivotal.Person (Person)
 import qualified Data.ByteString      as B
 import qualified Data.Text            as T
 import qualified Data.ByteString.Lazy as L
@@ -32,16 +33,18 @@ data StoriesParams = StoryListParams ListParams
 newtype Handler = Handler { unHandler :: L.ByteString -> IO T.Text }
     deriving (Show)
 
-data Config = Config { cURL      :: String
-                     , cOptions  :: Wreq.Options
-                     , handle200 :: Handler
-                     }
-    deriving (Show)
+data Config = Config
+  { cURL :: String            -- ^  url of a pivotal endpoint
+  , cOptions :: Wreq.Options  -- ^  Connection options to pass to Wreq
+  , handle200 :: Handler      -- ^  A hander that converts the response from wreq to Text
+  , cPeople :: Maybe [Person] -- ^  People affiliated with this project
+  } deriving (Show)
 
 mkConfig :: Token -> String -> (L.ByteString -> IO T.Text) -> Config
 mkConfig token url f = Config { cURL = url
                               , cOptions = setToken token defaultOptions
                               , handle200 = Handler f
+                              , cPeople = Nothing
                               }
 
 defaultOptions :: Wreq.Options

@@ -1,8 +1,13 @@
+-- This file has been generated from package.yaml by hpack version 0.14.1.
+--
+-- see: https://github.com/sol/hpack
+
 name:                pivotal
 version:             0.1.0.0
 synopsis:            TODO Initial project template from stack
 description:         Please see README.md
-homepage:            https://github.com/rob-b/pivotal
+homepage:            https://github.com/rob-b/pivotal#readme
+bug-reports:         https://github.com/rob-b/pivotal/issues
 license:             BSD3
 license-file:        LICENSE
 author:              Author name here
@@ -10,58 +15,73 @@ maintainer:          example@example.com
 copyright:           2016 Author name here
 category:            Acme
 build-type:          Simple
-extra-source-files:  README.md
-cabal-version:       >=1.10
-tested-with:         GHC == 7.10.2
+cabal-version:       >= 1.10
+tested-with:         GHC==7.10.2
 
-library
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-  hs-source-dirs:      src
-  exposed-modules:     Pivotal.Lib
-                     , Pivotal.Options
-                     , Pivotal.Url
-                     , Pivotal.Extract
-                     , Pivotal.Format
-                     , Pivotal.Person
-                     , Pivotal.Types
-                     , Pivotal
-  build-depends:       base >= 4.7 && < 5
-                     , wreq
-                     , lens
-                     , lens-aeson
-                     , http-client
-                     , bytestring
-                     , text
-                     , formatting
-                     , optparse-applicative
-                     , http-types
-                     , either
-                     , transformers
-                     , aeson
-                     , mtl
-
-executable pivotal
-  default-language:    Haskell2010
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  hs-source-dirs:      app
-  main-is:             Main.hs
-  build-depends:       base
-                     , pivotal
-                     , bytestring
-                     , text
-
-test-suite spec
-  default-language:    Haskell2010
-  ghc-options:         -Wall
-  type:                exitcode-stdio-1.0
-  hs-source-dirs:      test
-  main-is:             Spec.hs
-  build-depends:       base
-                     , pivotal
-                     , hspec
-                     , QuickCheck
+extra-source-files:
+    README.md
 
 source-repository head
-  type:     git
+  type: git
   location: https://github.com/rob-b/pivotal
+
+library
+  default-language: Haskell2010
+  ghc-options: -Wall
+  hs-source-dirs:
+      src
+  exposed-modules:
+      Pivotal
+      Pivotal.Extract
+      Pivotal.Format
+      Pivotal.Lib
+      Pivotal.Options
+      Pivotal.Person
+      Pivotal.Types
+      Pivotal.Url
+  other-modules:
+      Paths_pivotal
+  build-depends:
+      base >=4.7 && <5
+    , wreq
+    , lens
+    , lens-aeson
+    , http-client
+    , bytestring
+    , text
+    , formatting
+    , optparse-applicative
+    , http-types
+    , either
+    , transformers
+    , aeson
+    , mtl
+    , directory
+    , exceptions
+
+executable pivotal
+  default-language: Haskell2010
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  hs-source-dirs:
+      app
+  main-is: Main.hs
+  build-depends:
+      base
+    , pivotal
+    , bytestring
+    , text
+
+test-suite spec
+  default-language: Haskell2010
+  ghc-options: -Wall
+  type: exitcode-stdio-1.0
+  hs-source-dirs:
+      test
+  main-is: Spec.hs
+  build-depends:
+      base
+    , pivotal
+    , hspec
+    , QuickCheck
+  other-modules:
+      LibSpec
