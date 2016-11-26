@@ -2,36 +2,34 @@
 
 -- | A library to do stuff.
 module Pivotal.Lib
-    (
-    -- Transform responses from wreq to formatted output
-      myProjectsHandler
-    , storiesHandler
-    , storyHandler
-    , projectMembersHandler
-    , genericHandler
+  (
+   -- Transform responses from wreq to formatted output
+    myProjectsHandler
+  , storiesHandler
+  , storyHandler
+  , projectMembersHandler
+  , genericHandler
+   -- convert a config to a Text of the response
+  , mkConfig
+  , processEndpoint)
+  where
 
-    -- convert a config to a Text of the response
-    , mkConfig
-    , processEndpoint
-    ) where
-
-import           Formatting
-import           Pivotal.Extract         ( errorMsg401, personList
-                                         , projectNames, storyDetail
-                                         , flatPerson
-                                         , storyDetailList )
-import           Pivotal.Types
-import           Network.Wreq            ( getWith, responseBody
-                                         , responseStatus, statusCode )
-import           Data.Aeson              ( encode )
-import           Control.Lens
-import qualified Pivotal.Format          as F
-import qualified Network.Wreq            as Wreq
-import qualified Data.Text.Lazy          as TL
+import Formatting
+import Pivotal.Extract
+       (errorMsg401, personList, projectNames, storyDetail, flatPerson,
+        storyDetailList)
+import Pivotal.Types
+import Network.Wreq
+       (getWith, responseBody, responseStatus, statusCode)
+import Data.Aeson (encode)
+import Control.Lens
+import qualified Pivotal.Format as F
+import qualified Network.Wreq as Wreq
+import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TL
-import qualified Data.Text               as T
-import qualified Data.ByteString.Lazy    as L
-import           Control.Monad.Reader
+import qualified Data.Text as T
+import qualified Data.ByteString.Lazy as L
+import Control.Monad.Reader
 
 personFile :: FilePath
 personFile = ".people.json"
@@ -48,17 +46,18 @@ doRequest :: Wreq.Options -> String -> Handler -> IO T.Text
 doRequest options url handler = do
   r <- getWith options url
   case r ^. responseStatus . statusCode of
-    x | x `elem` [400..499] -> handle4xx (r ^. responseBody)
+    x
+      | x `elem` [400 .. 499] -> handle4xx (r ^. responseBody)
     200 -> unHandler handler (r ^. responseBody)
     _ -> genericHandler (r ^. responseBody)
 
 formatSingleProject :: (Integer, T.Text) -> T.Text
-formatSingleProject (project_id, project_name) =
-    sformat ("#" % int % " " % stext) project_id project_name
+formatSingleProject (project_id,project_name) =
+  sformat ("#" % int % " " % stext) project_id project_name
 
 myProjectsHandler :: L.ByteString -> IO T.Text
 myProjectsHandler body =
-    return $ T.intercalate "\n" (map formatSingleProject (projectNames body))
+  return $ T.intercalate "\n" (map formatSingleProject (projectNames body))
 
 storiesHandler :: L.ByteString -> IO T.Text
 storiesHandler = return . F.format . storyDetailList
