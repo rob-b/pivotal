@@ -1,0 +1,63 @@
+name: pivotal
+version: '0.1.0.0'
+synopsis: TODO Initial project template from stack
+description: Please see README.md
+category: Acme
+author: Author name here
+maintainer: example@example.com
+copyright: 2016 Author name here
+license: BSD3
+github: rob-b/pivotal
+tested-with: GHC==7.10.2
+extra-source-files:
+- README.md
+library:
+  source-dirs: src
+  ghc-options: -Wall
+  exposed-modules:
+  - Pivotal.Lib
+  - Pivotal.Options
+  - Pivotal.Url
+  - Pivotal.Extract
+  - Pivotal.Format
+  - Pivotal.Person
+  - Pivotal.Types
+  - Pivotal
+  dependencies:
+  - base >=4.7 && <5
+  - wreq
+  - lens
+  - lens-aeson
+  - http-client
+  - bytestring
+  - text
+  - formatting
+  - optparse-applicative
+  - http-types
+  - either
+  - transformers
+  - aeson
+  - mtl
+executables:
+  pivotal:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - base
+    - pivotal
+    - bytestring
+    - text
+tests:
+  spec:
+    main: Spec.hs
+    source-dirs: test
+    ghc-options: -Wall
+    dependencies:
+    - base
+    - pivotal
+    - hspec
+    - QuickCheck
