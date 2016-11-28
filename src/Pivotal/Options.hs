@@ -70,8 +70,8 @@ storyStatuses =
   , "finished"
   , "started"
   , "rejected"
-  , "planned"
-  , "unstarted"
+  , "planned" -- unstarted stories in current
+  , "unstarted" -- stories in backlog
   , "unscheduled"]
 
 storyKinds :: [B.ByteString]
@@ -117,15 +117,16 @@ commandParser :: Parser Command
 commandParser =
   subparser $
   command "stories" (withInfo storiesParser "View story") <>
-  command "todo" (withInfo (storyParser "unstarted") "View unstarted stories") <>
-  command "started" (withInfo (storyParser "started") "View started stories") <>
+  command "todo" (withInfo (storyParser "planned") "View unstarted stories in current") <>
+  command "started" (withInfo (storyParser "started") "View started stories in current") <>
   command "finished" (withInfo (storyParser "finished") "View finished stories") <>
+  command "accepted" (withInfo (storyParser "accepted") "View accepted stories") <>
   command
     "delivered"
     (withInfo (storyParser "delivered") "View delivered stories") <>
   command
     "icebox"
-    (withInfo (storyParser "unscheduled") "View delivered stories") <>
+    (withInfo (storyParser "unscheduled") "View unscheduled stories from the icebox") <>
   command "profile" (withInfo (pure Me) "View user's profile") <>
   command "projects" (withInfo (pure Projects) "View user's projects") <>
   command "setup" (withInfo (pure Setup) "Create a local project file")
